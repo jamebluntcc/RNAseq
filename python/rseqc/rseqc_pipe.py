@@ -4,9 +4,13 @@ import os
 import sys
 import ConfigParser
 
-ConfigFile = '/media/zxchen/3dddd6c4-2700-41a5-a677-15b165fa4e64/scripts/python/configure.ini'
+ConfigFile = '/home/public/scripts/RNAseq/python/configure.ini'
 conf = ConfigParser.ConfigParser()
 conf.read(ConfigFile)
+
+read_distribution_plot_prepare = conf.get('server34', 'read_distribution_plot_prepare')
+r_home = conf.get('server34', 'r_home')
+rseqc_plot_r = conf.get('server34', 'rseqc_plot_r')
 
 def run_cmd(cmd):
     p = subprocess.Popen(cmd, shell=False, universal_newlines=True, stdout=subprocess.PIPE)
@@ -195,6 +199,57 @@ class infer_experiment(luigi.Task):
         return luigi.LocalTarget('{0}/infer_experiment/{1}.infer_experiment.txt'.format(OutDir, self.sample))
 
 
+class read_duplication_plot_prepare(luigi.Task):
+    '''
+    collection read duplication plot data
+    '''
+
+    def requires(self):
+        return [infer_experiment(sample = sample) for sample in sample_list]
+
+    def run(self):
+        tmp = run_cmd(['python',
+        read_distribution_plot_prepare,
+        SampleInf,
+        '{0}/read_distribution/'.format(OutDir)])
+
+        with self.output().open('w') as read_distribution_plot_prepare_logs:
+            read_distribution_plot_prepare_logs.write(tmp)
+
+    def output(self):
+        return luigi.LocalTarget('{0}/logs/read_distribution_plot_prepare.log'.format(OutDir))
+
+
+class rseqc_plot(luigi.Task):
+
+    '''
+    rseqc data plot
+    '''
+
+    def requires(self):
+        return read_duplication_plot_prepare()
+
+    def run(self):
+        tmp = run_cmd(['{}/Rscript'.format(r_home),
+        rseqc_plot_r,
+        '--sample_inf',
+        SampleInf,
+        '--read_distribution_dir',
+        '{}/read_distribution'.format(OutDir),
+        '--genebody_cov_dir',
+        '{}/genebody_coverage'.format(OutDir),
+        '--inner_distance_dir',
+        '{}/inner_distance'.format(OutDir),
+        '--reads_duplication_dir',
+        '{}/read_duplication'.format(OutDir)])
+
+        with self.output().open('w') as rseqc_plot_logs:
+            rseqc_plot_logs.write(tmp)
+
+    def output(self):
+        return luigi.LocalTarget('{0}/logs/rseqc_plot.log'.format(OutDir))
+
+
 class rseqc_collection(luigi.Task):
 
     OutDir = luigi.Parameter()
@@ -208,8 +263,8 @@ class rseqc_collection(luigi.Task):
         SampleInf = self.SampleInf
         BamDir = self.BamDir
         BedFile = self.BedFile
-        sample_list = [each.strip() for each in open(self.SampleInf)]
-        return [infer_experiment(sample = sample) for sample in sample_list]
+        sample_list = [each.strip().split()[1] for each in open(self.SampleInf)]
+        return rseqc_plot()
 
     def run(self):
         pass
