@@ -115,6 +115,7 @@ om_boxplot <- function(plot_data, samples, outdir) {
   names(plot_data_df) <- c('id',colnames(plot_data))
   data.m <- melt(plot_data_df,id = 'id')
   data.m$variable <- as.character(data.m$variable)
+  data.m$variable <- factor(data.m$variable, levels = samples$sample)
   data.m$value <- as.numeric(data.m$value)
   for(i in 1:length(samples$sample)){
     data.m$group[data.m$variable == samples$sample[i]] <- samples$condition[i] 

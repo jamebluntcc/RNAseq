@@ -76,7 +76,7 @@ class run_diff(luigi.Task):
         '--quant_dir',
         '{}/kallisto'.format(OutDir),
         '--sample_inf',
-        GroupInf,
+        SampleInf,
         '--gene2tr',
         Gene2Tr,
         '--out_dir',
@@ -96,24 +96,25 @@ class quant_collection(luigi.Task):
     CleanDir = luigi.Parameter()
     Transcript = luigi.Parameter()
     Gene2Tr = luigi.Parameter()
-    GroupInf = luigi.Parameter()
 
     def requires(self):
-        global OutDir, SampleInf, CleanDir, sample_list, Transcript, Gene2Tr, GroupInf
+        global OutDir, SampleInf, CleanDir, sample_list, Transcript, Gene2Tr
         OutDir = self.OutDir
         SampleInf = self.SampleInf
         CleanDir = self.CleanDir
         Transcript = self.Transcript
         Gene2Tr = self.Gene2Tr
-        GroupInf = self.GroupInf
-        sample_list = [each.strip() for each in open(self.SampleInf)]
+        sample_list = [each.strip().split()[1] for each in open(SampleInf)]
         return run_diff()
 
     def run(self):
-        pass
+        ignore_files = ['.ignore', 'logs', 'kallisto/*/run_info.json']
+        with self.output().open('w') as ignore_inf:
+            for each_file in ignore_files:
+                ignore_inf.write('{}\n'.format(each_file))
 
     def output(self):
-        pass
+        return luigi.LocalTarget('{}/.ignore'.format(self.OutDir))
 
 if __name__ == '__main__':
     luigi.run()

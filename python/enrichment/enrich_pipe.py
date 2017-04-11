@@ -182,10 +182,13 @@ class enrichment_collection(luigi.Task):
         return [run_kegg_barplot(compare = each_compare) for each_compare in compare_list]
 
     def run(self):
-        pass
+        ignore_files = ['.ignore', 'logs', 'kegg/blast_out', 'kegg/kegg_pathway_logs']
+        with self.output().open('w') as ignore_inf:
+            for each_file in ignore_files:
+                ignore_inf.write('{}\n'.format(each_file))
 
     def output(self):
-        pass
+        return luigi.LocalTarget('{}/.ignore'.format(self.OutDir))
 
 if __name__ == '__main__':
     luigi.run()

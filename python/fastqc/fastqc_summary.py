@@ -1,17 +1,25 @@
 import sys
 import os
 import pandas as pd
+import xlsxwriter
 
-
-
-if not len(sys.argv) == 3:
-    print 'python ' + sys.argv[0] + ' sample_list qc_dir > out.summary'
+if not len(sys.argv) == 4:
+    print 'python ' + sys.argv[0] + ' sample_list qc_dir out.summary.prefix'
     sys.exit(0)
 
 def circ_mkdir_unix(path):
     cmd = 'mkdir -p %s' % path
     if not os.path.isdir(path):
         os.system(cmd)
+
+def output_to_xlsx(worksheet, info_list, row_num):
+    for n,each in enumerate(info_list):
+        each = str(each)
+        if isinstance(each, str):
+            worksheet.write_string(row_num,n,each)
+        else:
+            worksheet.write_number(row_num,n,each)
+
 
 def add_gc_and_n_inf(gc_info_dict,fastqc_line, fq_number, omit_base = False):
     if fastqc_line.startswith('#'):
@@ -32,8 +40,9 @@ def add_gc_and_n_inf(gc_info_dict,fastqc_line, fq_number, omit_base = False):
 
 sample_list_file = sys.argv[1]
 qc_dir = sys.argv[2]
+out_summary_prefix = sys.argv[3]
 
-sample_list = [each.strip() for each in open(sample_list_file)]
+sample_list = [each.strip().split()[1] for each in open(sample_list_file)]
 sample_info_dict = {}
 
 GC_HEADER = ['#Base', 'A', 'T', 'G', 'C', 'N']
@@ -111,11 +120,31 @@ for each_sample in sample_list:
             merged_quality_file_inf.write('{each_sample}\t{each_quality}\t{each_quality_count}\t{each_quality_portion}\n'.format(**locals()))
 merged_quality_file_inf.close()
 
-print 'Sample_ID\tReads_number(M)\tReads_length(bp)\tData_size(G)\tQ30(%)\tGC(%)'
+out_summary_txt_file = '{}.txt'.format(out_summary_prefix)
+out_summary_xlsx_file = '{}.xlsx'.format(out_summary_prefix)
+
+header = 'Sample_ID\tReads_number(M)\tReads_length(bp)\tData_size(G)\tQ30(%)\tGC(%)'
+header_list = header.split('\t')
+
+out_summary_txt_inf = open(out_summary_txt_file, 'w')
+out_summary_txt_inf.write('{}\n'.format(header))
+
+workbook = xlsxwriter.Workbook(out_summary_xlsx_file)
+worksheet = workbook.add_worksheet()
+row_num = 0
+output_to_xlsx(worksheet, header_list, row_num)
+row_num += 1
+
 for each_sample in sample_list:
     reads_num = round(sample_info_dict[each_sample][1]/float(10**6), 2)
     read_length = sample_info_dict[each_sample][0]
     data_size = round(sample_info_dict[each_sample][1]*sample_info_dict[each_sample][0]/float(1000**3), 2)
     q30 = round(sample_info_dict[each_sample][2]*100/float(sample_info_dict[each_sample][1]), 2)
     gc_content = sum(sample_info_dict[each_sample][3])/float(len(sample_info_dict[each_sample][3]))
-    print '%s\t%s\t%s\t%s\t%s\t%s' % (each_sample, reads_num, read_length, data_size, q30, gc_content)
+    out_line = '%s\t%s\t%s\t%s\t%s\t%s' % (each_sample, reads_num, read_length, data_size, q30, gc_content)
+    out_summary_txt_inf.write('{}\n'.format(out_line))
+    out_list = [each_sample, reads_num, read_length, data_size, q30, gc_content]
+    output_to_xlsx(worksheet, out_list, row_num)
+    row_num += 1
+out_summary_txt_inf.close()
+workbook.close()

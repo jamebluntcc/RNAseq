@@ -4,7 +4,7 @@ import os
 import sys
 import ConfigParser
 
-ConfigFile = '/media/zxchen/3dddd6c4-2700-41a5-a677-15b165fa4e64/scripts/python/configure.ini'
+ConfigFile = '/home/public/scripts/RNAseq/python/configure.ini'
 conf = ConfigParser.ConfigParser()
 conf.read(ConfigFile)
 FASTQC_SUMMERY = conf.get('server34', 'fastqc_data_info')
@@ -71,12 +71,13 @@ class fastqc_summary(luigi.Task) :
         tmp = run_cmd(['python',
                         FASTQC_SUMMERY,
                         '{}'.format(SampleInf),
-                        '{}'.format(OutDir)])
+                        '{}'.format(OutDir),
+                        '{}/fastqc_general_stats'.format(OutDir)])
         with self.output().open('w') as qc_summary:
             qc_summary.write(tmp)
 
     def output(self):
-        return luigi.LocalTarget('{}/fastqc_general_stats.txt'.format(OutDir))
+        return luigi.LocalTarget('{}/logs/fastqc_summary.log'.format(OutDir))
 
 class gc_plot(luigi.Task):
     '''
@@ -131,14 +132,17 @@ class fastqc_collection(luigi.Task):
         OutDir = self.OutDir
         SampleInf = self.SampleInf
         CleanDir = self.CleanDir
-        sample_list = [each.strip() for each in open(self.SampleInf)]
+        sample_list = [each.strip().split()[1] for each in open(SampleInf)]
         return reads_quality_plot()
 
     def run(self):
-        pass
+        ignore_files = ['.ignore', 'logs', 'fastqc_results/*zip', 'gc_plot/*txt', 'reads_quality_plot/*txt']
+        with self.output().open('w') as ignore_inf:
+            for each_file in ignore_files:
+                ignore_inf.write('{}\n'.format(each_file))
 
     def output(self):
-        pass
+        return luigi.LocalTarget('{}/.ignore'.format(self.OutDir))
 
 if __name__ == '__main__':
     luigi.run()
