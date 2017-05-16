@@ -1,1 +1,1 @@
-/home/lxgui/scripts/RNAseq_tools.py
+lib/RNAseq_tools.py
