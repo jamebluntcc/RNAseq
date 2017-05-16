@@ -8,7 +8,7 @@ out_dir <- args[4]
 
 options(bitmapType='cairo')
 
-all_data_dir <- '/home/public/database/kegg/pathway/'
+all_data_dir <- '/public/database/kegg/pathway/'
 database_dir <- paste(all_data_dir, spe, sep = '/')
 
 pathway_data <- read.table(spe_gene, header = F, sep = '\t', row.names = 1)

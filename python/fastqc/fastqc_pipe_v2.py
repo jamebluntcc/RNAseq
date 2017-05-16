@@ -1,22 +1,17 @@
-import subprocess
+#! /usr/bin/python
+
 import luigi
-import os
+from os import path
 import sys
-import ConfigParser
 
-ConfigFile = '/home/public/scripts/RNAseq/python/configure.ini'
-conf = ConfigParser.ConfigParser()
-conf.read(ConfigFile)
-FASTQC_SUMMERY = conf.get('server34', 'fastqc_data_info')
-FASTQC = conf.get('server34', 'fastqc')
-GC_PLOT = conf.get('server34', 'gc_plot')
-RQ_PLOT = conf.get('server34', 'rq_plot')
-
-def run_cmd(cmd):
-    p = subprocess.Popen(cmd, shell=False, universal_newlines=True, stdout=subprocess.PIPE)
-    ret_code = p.wait()
-    output = p.communicate()[0]
-    return output
+script_path = path.dirname(path.abspath(__file__))
+RNAseq_lib_path = path.join(script_path, '..')
+sys.path.insert(0, RNAseq_lib_path)
+from RNAseq_lib import FASTQC_SUMMERY
+from RNAseq_lib import FASTQC
+from RNAseq_lib import GC_PLOT
+from RNAseq_lib import RQ_PLOT
+from RNAseq_lib import run_cmd
 
 class prepare(luigi.Task):
     '''
@@ -24,8 +19,8 @@ class prepare(luigi.Task):
     '''
 
     def run(self):
-        log_dir = os.path.join(OutDir, 'logs')
-        fastqc_outdir = os.path.join(OutDir, 'fastqc_results')
+        log_dir = path.join(OutDir, 'logs')
+        fastqc_outdir = path.join(OutDir, 'fastqc_results')
         tmp = run_cmd(['mkdir',
                         '-p',
                         log_dir,
@@ -89,8 +84,8 @@ class gc_plot(luigi.Task):
         return fastqc_summary()
 
     def run(self):
-        gc_file = os.path.join(OutDir, 'gc_plot', '{0}.gc.txt'.format(self.sample))
-        out_prefix = os.path.join(OutDir, 'gc_plot', self.sample)
+        gc_file = path.join(OutDir, 'gc_plot', '{0}.gc.txt'.format(self.sample))
+        out_prefix = path.join(OutDir, 'gc_plot', self.sample)
         tmp = run_cmd(['Rscript',
         GC_PLOT,
         '--gcfile',

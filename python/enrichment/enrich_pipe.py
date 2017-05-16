@@ -2,29 +2,26 @@ import subprocess
 import luigi
 from os import path
 from os import listdir
-import ConfigParser
+import sys
 
-ConfigFile = '/home/public/scripts/RNAseq/python/configure.ini'
-conf = ConfigParser.ConfigParser()
-conf.read(ConfigFile)
+script_path = path.dirname(path.abspath(__file__))
+RNAseq_lib_path = path.join(script_path, '..')
+sys.path.insert(0, RNAseq_lib_path)
+from RNAseq_lib import run_cmd
+from RNAseq_lib import GO_ANALYSIS_R
+from RNAseq_lib import KEGG_ANALYSIS_PYTHON
+from RNAseq_lib import ENRICH_BARPLOT_R
+# from RNAseq_lib import No_task
 
-r_home = conf.get('server34', 'r_home')
-go_analysis_r = conf.get('server34', 'go_analysis_r')
-kegg_analysis_python = conf.get('server34', 'kegg_analysis_python')
-enrich_barplot_r = conf.get('server34', 'enrich_barplot_r')
-
-def run_cmd(cmd):
-    p = subprocess.Popen(cmd, shell=False, universal_newlines=True, stdout=subprocess.PIPE)
-    ret_code = p.wait()
-    output = p.communicate()[0]
-    return output
 
 class prepare(luigi.Task):
-
     '''
     prepare directories for enrichment analysis
 
     '''
+
+    # def requires(self):
+    #     return UpstreamTask
 
     def run(self):
 
@@ -53,8 +50,8 @@ class run_go(luigi.Task):
         return prepare()
 
     def run(self):
-        tmp = run_cmd(['{}/Rscript'.format(r_home),
-        go_analysis_r,
+        tmp = run_cmd(['Rscript',
+        GO_ANALYSIS_R,
         '--quant_dir',
         QuantDir,
         '--go_anno',
@@ -82,11 +79,13 @@ class run_kegg(luigi.Task):
 
     def run(self):
         tmp = run_cmd(['python',
-        kegg_analysis_python,
+        KEGG_ANALYSIS_PYTHON,
         '--blast_out',
         KEGGBlast,
         '--species',
         KEGGAbbr,
+        '--background',
+        KEGGBackground,
         '--diff_dir',
         '{}/differential_analysis/'.format(QuantDir),
         '--out_dir',
@@ -110,7 +109,7 @@ class run_go_barplot(luigi.Task):
 
     def run(self):
         tmp = run_cmd(['Rscript',
-        enrich_barplot_r,
+        ENRICH_BARPLOT_R,
         '--anno',
         GoseqAnno,
         '--table',
@@ -140,7 +139,7 @@ class run_kegg_barplot(luigi.Task):
 
     def run(self):
         tmp = run_cmd(['Rscript',
-        enrich_barplot_r,
+        ENRICH_BARPLOT_R,
         '--anno',
         KEGGBlast,
         '--table',
@@ -166,10 +165,13 @@ class enrichment_collection(luigi.Task):
     TopgoAnno = luigi.Parameter()
     GeneLen = luigi.Parameter()
     KEGGAbbr = luigi.Parameter()
+    KEGGBackground = luigi.Parameter(default = "")
     KEGGBlast = luigi.Parameter()
+    ReRun = luigi.Parameter()
+    # UpstreamTask = luigi.Parameter(default=No_task)
 
     def requires(self):
-        global QuantDir, OutDir, GoseqAnno, TopgoAnno, GeneLen, KEGGAbbr, KEGGBlast, compare_list
+        global QuantDir, OutDir, GoseqAnno, TopgoAnno, GeneLen, KEGGAbbr, KEGGBlast, compare_list, UpstreamTask, KEGGBackground
         QuantDir = self.QuantDir
         OutDir = self.OutDir
         GoseqAnno = self.GoseqAnno
@@ -177,6 +179,11 @@ class enrichment_collection(luigi.Task):
         GeneLen = self.GeneLen
         KEGGAbbr = self.KEGGAbbr
         KEGGBlast = self.KEGGBlast
+        if not self.KEGGBackground:
+            KEGGBackground = KEGGAbbr
+        else:
+            KEGGBackground = self.KEGGBackground
+        # UpstreamTask = self.UpstreamTask
         diff_dir = path.join(QuantDir, 'differential_analysis')
         compare_list = listdir(diff_dir)
         return [run_kegg_barplot(compare = each_compare) for each_compare in compare_list]

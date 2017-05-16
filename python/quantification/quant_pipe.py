@@ -1,21 +1,13 @@
-import subprocess
 import luigi
 from os import path
 import sys
-import ConfigParser
 
-ConfigFile = '/home/public/scripts/RNAseq/python/configure.ini'
-conf = ConfigParser.ConfigParser()
-conf.read(ConfigFile)
+script_path = path.dirname(path.abspath(__file__))
+RNAseq_lib_path = path.join(script_path, '..')
+sys.path.insert(0, RNAseq_lib_path)
+from RNAseq_lib import run_cmd
+from RNAseq_lib import KALLISTO_TO_DIFF
 
-r_home = conf.get('server34', 'r_home')
-kallisto_to_diff = conf.get('server34', 'kallisto_to_diff')
-
-def run_cmd(cmd):
-    p = subprocess.Popen(cmd, shell=False, universal_newlines=True, stdout=subprocess.PIPE)
-    ret_code = p.wait()
-    output = p.communicate()[0]
-    return output
 
 class prepare(luigi.Task):
     '''
@@ -71,8 +63,8 @@ class run_diff(luigi.Task):
         return [run_kallisto(sample = each_sample) for each_sample in sample_list]
 
     def run(self):
-        tmp = run_cmd(['{}/Rscript'.format(r_home),
-        kallisto_to_diff,
+        tmp = run_cmd(['Rscript',
+        KALLISTO_TO_DIFF,
         '--quant_dir',
         '{}/kallisto'.format(OutDir),
         '--sample_inf',

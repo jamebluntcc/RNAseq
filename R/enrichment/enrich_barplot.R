@@ -60,7 +60,7 @@ enrich_data <- function(data,type,label,show_num,max_name_length,all_count,term_
   for(i in 1:dim(data)[1]){
     if(nchar(data$Term[i]) > max_name_length){
       data$Term[i] <- paste0(substr(data$Term[i],1,max_name_length/2),'...',
-                             substr(data$Term[i],(nchar(data$Term[i]) - max_name_length/2),nchar(data$Term[i]))) 
+                             substr(data$Term[i],(nchar(data$Term[i]) - max_name_length/2),nchar(data$Term[i])))
     }
   }
   if(length(unique(data$Term)) != length(data$Term)){
@@ -88,7 +88,7 @@ enrich_barplot <- function(enrich_merge_data,x_lab = "",y_lab = "Number of genes
     scale_fill_manual(values = c('up'='#00A08A','down'='#FF0000','all'='#5BBCD6','expected'='black'),
                       breaks = c('all','down','up','expected'),labels = c('No. of all diff-expressed genes',
                                                                            paste("No.",break_label2," up-regulated genes",sep = " "),
-                                                                           paste("No.",break_label1," up-regulated genes",sep = " "), 
+                                                                           paste("No.",break_label1," up-regulated genes",sep = " "),
                                                                            'Expected no. of genes'))+
     guides(fill = guide_legend(title = ""))+ylab(y_lab)+xlab(x_lab)
   p
@@ -148,7 +148,7 @@ if(enrichment_type == 'kegg'){
   kegg_all_data <- enrich_data(all_data,type = 'kegg',label = 'all',show_num = 15,max_name_length = 90,
                                all_count = find_count(kegg_all_term_count),term_count = all_data_term_count)
   kegg_merge_data <- rbind(kegg_all_data, kegg_up_data,kegg_down_data)
-  kegg_merge_data$Term <- factor(kegg_merge_data$Term,levels = kegg_merge_data$Term)
+  kegg_merge_data$Term <- factor(kegg_merge_data$Term,levels = unique(kegg_merge_data$Term))
   #add expected
   kegg_merge_data[dim(kegg_merge_data)[1]+1,] <- kegg_merge_data[dim(kegg_merge_data)[1],]
   kegg_merge_data[dim(kegg_merge_data)[1],c('Input_number','expected')] <- 0
@@ -193,7 +193,7 @@ if(enrichment_type == 'kegg'){
   go_all_data <- enrich_data(all_data,type = 'go',label = 'all',show_num = 15,max_name_length = 90,
                                all_count = find_count(go_all_term_count),term_count = all_data_term_count)
   go_merge_data <- rbind(go_all_data, go_up_data,go_down_data)
-  go_merge_data$Term <- factor(go_merge_data$Term,levels = go_merge_data$Term)
+  go_merge_data$Term <- factor(go_merge_data$Term,levels = unique(go_merge_data$Term))
   #add expected
   go_merge_data[dim(go_merge_data)[1]+1,] <- go_merge_data[dim(go_merge_data)[1],]
   go_merge_data[dim(go_merge_data)[1],c('Input_number','expected')] <- 0
@@ -205,7 +205,3 @@ if(enrichment_type == 'kegg'){
          plot = enrich_barplot(go_merge_data,break_label1 = unlist(strsplit(first_level_split[1],split = "_vs_"))[1],
                                break_label2 = unlist(strsplit(first_level_split[1],split = "_vs_"))[2]),height = 9, width = dim(go_merge_data)[1]/4,type = "cairo-png")
 }
-
-
-
-

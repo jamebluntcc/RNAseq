@@ -1,7 +1,7 @@
 suppressMessages(library(dplyr))
 suppressMessages(library(argparser))
 
-source('/home/public/scripts/RNAseq/R/enrichment/go_lib.R')
+source('/public/scripts/RNAseq/R/enrichment/go_lib.R')
 # source('../atom/R/enrichment/enrich_lib.R')
 
 p <- arg_parser("perform go analysis")
@@ -67,9 +67,9 @@ for (i in seq(length(all_compares))) {
 }
 
 # library(topGO)
-# 
+#
 # diff_genes <- all_diff_genes
-# 
+#
 run_topgo <- function(gene_go_map, diff_genes, enrich_result, name, out_dir) {
   geneID2GO <- readMappings(file = topgo_anno_file)
   geneNames <- names(geneID2GO)

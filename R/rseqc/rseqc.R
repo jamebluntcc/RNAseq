@@ -7,7 +7,7 @@ suppressMessages(library(reshape2))
 suppressMessages(library(plyr))
 suppressMessages(library(dplyr))
 options(stringsAsFactors = F)
-source('/home/public/scripts/RNAseq/R/quantification/quant_plot.R')
+source('/public/scripts/RNAseq/R/quantification/quant_plot.R')
 
 p <- arg_parser("rseqc plot")
 p <- add_argument(p, "--sample_inf", help = "sample information")
@@ -40,11 +40,11 @@ read_distribution_filter_df <- dplyr::filter(read_distribution_df, Total_bases >
 ### plot
 theme_set(theme_onmath() + theme(panel.grid.minor = element_blank(), panel.grid.major = element_blank()))
 onmath_color <- colorRampPalette(onmath_color_basel)(length(unique(read_distribution_df$Group)))
-p <- ggplot(read_distribution_filter_df, aes(Sample, Tag_count, fill = Group)) + 
-  geom_bar(colour = 'black', position = "fill", stat = 'identity') + 
+p <- ggplot(read_distribution_filter_df, aes(Sample, Tag_count, fill = Group)) +
+  geom_bar(colour = 'black', position = "fill", stat = 'identity') +
   scale_fill_manual('Genomic features', values = onmath_color) +
-  scale_y_continuous(labels = percent_format(), expand = c(0, 0)) + 
-  labs(x = NULL, y = NULL) 
+  scale_y_continuous(labels = percent_format(), expand = c(0, 0)) +
+  labs(x = NULL, y = NULL)
 
 ### output
 sample_number <- length(unique(read_distribution_df$Sample))
@@ -77,7 +77,7 @@ gene_cov_mdf <- melt(gene_cov_per_df, id = 'samples')
 theme_set(theme_onmath())
 onmath_color <- colorRampPalette(onmath_color_basel)(length(group_inf_df$V2))
 
-gene_body_cov_plot <- ggplot(gene_cov_mdf, aes(variable, value, colour = samples, group = samples)) + 
+gene_body_cov_plot <- ggplot(gene_cov_mdf, aes(variable, value, colour = samples, group = samples)) +
   geom_point(size = 1) + geom_line() +
   scale_y_continuous(labels = percent_format()) +
   scale_x_discrete(breaks = seq(0,100,5)) +
@@ -101,15 +101,15 @@ for (i in seq(length(inner_distance_files))){
 inner_distance_df <- ldply(inner_distance_list, data.frame)
 inner_distance_df$sample <- factor(inner_distance_df$sample, levels = group_inf_df$V2)
 
-theme_set(theme_onmath_border() + 
-            theme(panel.grid.minor = element_blank(), 
-                  panel.grid.major = element_blank(), 
+theme_set(theme_onmath_border() +
+            theme(panel.grid.minor = element_blank(),
+                  panel.grid.major = element_blank(),
                   strip.background = element_blank()
                   )
 )
 
-inner_distance_plot <- ggplot(inner_distance_df, aes(x = V2, y = proportion, fill = sample )) + 
-  geom_bar(stat = 'identity', width = 5, colour = 'black') + 
+inner_distance_plot <- ggplot(inner_distance_df, aes(x = V2, y = proportion, fill = sample )) +
+  geom_bar(stat = 'identity', width = 5, colour = 'black') +
   scale_x_continuous(breaks = seq(-200, 200, 50)) +
   scale_fill_manual(values = onmath_color) +
   scale_y_continuous(labels = percent_format(), expand = c(0, 0)) +
@@ -153,12 +153,12 @@ onmath_color <- colorRampPalette(onmath_color_basel)(length(group_inf_df$V2))
 
 theme_set(theme_onmath())
 onmath_color <- colorRampPalette(onmath_color_basel)(length(group_inf_df$V2))
-reads_duplication_plot <- ggplot(reads_duplication_df, aes(Occurrence, proportion, group = sample, colour = sample)) + 
+reads_duplication_plot <- ggplot(reads_duplication_df, aes(Occurrence, proportion, group = sample, colour = sample)) +
   geom_point() + geom_line() +
-  scale_y_continuous(breaks = seq(0,max_proportion,0.1), limits = c(0,max_proportion), 
-                     labels = percent_format(), expand = c(0, 0)) + 
-  scale_color_manual(values = onmath_color) + 
-  labs(x = 'Occurrence of reads', y = 'Percent of reads') 
+  scale_y_continuous(breaks = seq(0,max_proportion,0.1), limits = c(0,max_proportion),
+                     labels = percent_format(), expand = c(0, 0)) +
+  scale_color_manual(values = onmath_color) +
+  labs(x = 'Occurrence of reads', y = 'Percent of reads')
 
 ggsave(filename = paste(reads_duplication_dir,'reads_duplication.png', sep = '/'), plot = reads_duplication_plot, type="cairo-png", width = 6, height = 6, dpi = 300)
 ggsave(filename = paste(reads_duplication_dir,'reads_duplication.pdf', sep = '/'), plot = reads_duplication_plot, width = 6, height = 6)

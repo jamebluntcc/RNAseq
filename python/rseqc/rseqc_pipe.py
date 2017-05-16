@@ -1,22 +1,15 @@
 import subprocess
 import luigi
-import os
+from os import path
 import sys
-import ConfigParser
 
-ConfigFile = '/home/public/scripts/RNAseq/python/configure.ini'
-conf = ConfigParser.ConfigParser()
-conf.read(ConfigFile)
-
-read_distribution_plot_prepare = conf.get('server34', 'read_distribution_plot_prepare')
-r_home = conf.get('server34', 'r_home')
-rseqc_plot_r = conf.get('server34', 'rseqc_plot_r')
-
-def run_cmd(cmd):
-    p = subprocess.Popen(cmd, shell=False, universal_newlines=True, stdout=subprocess.PIPE)
-    ret_code = p.wait()
-    output = p.communicate()[0]
-    return output
+script_path = path.dirname(path.abspath(__file__))
+RNAseq_lib_path = path.join(script_path, '..')
+sys.path.insert(0, RNAseq_lib_path)
+# from RNAseq_lib import No_task
+from RNAseq_lib import run_cmd
+from RNAseq_lib import READ_DISTRIBUTION_PLOT_PREPARE
+from RNAseq_lib import RSEQC_PLOT_R
 
 
 class prepare(luigi.Task):
@@ -24,14 +17,17 @@ class prepare(luigi.Task):
     prepare directory and others
     '''
 
+    # def requires(self):
+    #     return UpstreamTask
+
     def run(self):
-        log_dir = os.path.join(OutDir, 'logs')
-        read_distribution = os.path.join(OutDir, 'read_distribution')
-        genebody_coverage = os.path.join(OutDir, 'genebody_coverage')
-        inner_distance = os.path.join(OutDir, 'inner_distance')
-        junction_saturation = os.path.join(OutDir, 'junction_saturation')
-        read_duplication = os.path.join(OutDir, 'read_duplication')
-        infer_experiment = os.path.join(OutDir, 'infer_experiment')
+        log_dir = path.join(OutDir, 'logs')
+        read_distribution = path.join(OutDir, 'read_distribution')
+        genebody_coverage = path.join(OutDir, 'genebody_coverage')
+        inner_distance = path.join(OutDir, 'inner_distance')
+        junction_saturation = path.join(OutDir, 'junction_saturation')
+        read_duplication = path.join(OutDir, 'read_duplication')
+        infer_experiment = path.join(OutDir, 'infer_experiment')
 
         tmp = run_cmd(['mkdir',
                         '-p',
@@ -209,7 +205,7 @@ class read_duplication_plot_prepare(luigi.Task):
 
     def run(self):
         tmp = run_cmd(['python',
-        read_distribution_plot_prepare,
+        READ_DISTRIBUTION_PLOT_PREPARE,
         SampleInf,
         '{0}/read_distribution/'.format(OutDir)])
 
@@ -230,8 +226,8 @@ class rseqc_plot(luigi.Task):
         return read_duplication_plot_prepare()
 
     def run(self):
-        tmp = run_cmd(['{}/Rscript'.format(r_home),
-        rseqc_plot_r,
+        tmp = run_cmd(['Rscript',
+        RSEQC_PLOT_R,
         '--sample_inf',
         SampleInf,
         '--read_distribution_dir',
@@ -256,21 +252,24 @@ class rseqc_collection(luigi.Task):
     SampleInf = luigi.Parameter()
     BamDir = luigi.Parameter()
     BedFile = luigi.Parameter()
+    # UpstreamTask = luigi.Parameter(default=No_task)
 
     def requires(self):
-        global OutDir, SampleInf, BamDir, BedFile, sample_list
+        global OutDir, SampleInf, BamDir, BedFile, sample_list, UpstreamTask
         OutDir = self.OutDir
         SampleInf = self.SampleInf
         BamDir = self.BamDir
         BedFile = self.BedFile
+        # UpstreamTask = self.UpstreamTask
         sample_list = [each.strip().split()[1] for each in open(self.SampleInf)]
         return rseqc_plot()
 
     def run(self):
-        pass
+        with self.output().open('w') as rseqc_collection_log:
+            rseqc_collection_log.write('rseqc finished!')
 
     def output(self):
-        pass
+        return luigi.LocalTarget('{}/logs/rseqc.log'.format(self.OutDir))
 
 if __name__ == '__main__':
     luigi.run()

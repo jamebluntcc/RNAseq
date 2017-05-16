@@ -15,13 +15,17 @@ from os import system
 from os import listdir
 from os import path
 from glob import glob
-import python_tools
 from docopt import docopt
 import pandas as pd
+import sys
 
-EXTRACT_INF_BY_ID = '/home/lxgui/scripts/extract_info_by_id.py'
-PATHVIEW = '/home/public/scripts/RNAseq/python/enrichment/kegg_pathview.py'
-PATHVIEW_CK = '/home/public/scripts/RNAseq/python/enrichment/check_kegg_pathway.py'
+script_path = path.dirname(path.abspath(__file__))
+RNAseq_lib_path = path.join(script_path, '..')
+sys.path.insert(0, RNAseq_lib_path)
+import python_tools
+from RNAseq_lib import EXTRACT_INF_BY_ID
+from RNAseq_lib import PATHVIEW
+from RNAseq_lib import PATHVIEW_CK
 
 def txt_to_excel(txt_file, sheet_name = 'Sheet1'):
     pd.formats.format.header_style = None

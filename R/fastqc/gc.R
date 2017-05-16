@@ -19,7 +19,7 @@ theme_Publication <- function(base_size=14, base_family="helvetica") {
             axis.title = element_text(face = "bold",size = rel(1)),
             axis.title.y = element_text(angle=90,vjust =2),
             axis.title.x = element_text(vjust = -0.2),
-            axis.text = element_text(), 
+            axis.text = element_text(),
             axis.line = element_line(colour="black"),
             axis.ticks = element_line(),
             panel.grid.major = element_line(colour="#f0f0f0"),
@@ -34,19 +34,19 @@ theme_Publication <- function(base_size=14, base_family="helvetica") {
             strip.background=element_rect(colour="#f0f0f0",fill="#f0f0f0"),
             strip.text = element_text(face="bold")
     ))
-  
+
 }
 
 scale_fill_Publication <- function(...){
   library(scales)
   discrete_scale("fill","Publication",manual_pal(values = c("#386cb0","#fdb462","#7fc97f","#ef3b2c","#662506","#a6cee3","#fb9a99","#984ea3","#ffff33")), ...)
-  
+
 }
 
 scale_colour_Publication <- function(...){
   library(scales)
   discrete_scale("colour","Publication",manual_pal(values = c("#386cb0","#fdb462","#7fc97f","#ef3b2c","#662506","#a6cee3","#fb9a99","#984ea3","#ffff33")), ...)
-  
+
 }
 #----plot----
 p <- arg_parser('test argparser')
@@ -65,4 +65,3 @@ gg <- ggplot(data.m,aes(x = X.Base,y = value,colour = variable))+
   scale_colour_Publication()
 ggsave(paste(argv$prefix,'gc.png',sep = "."),plot = gg,width = 8,height = 6,dpi = 300,type = 'cairo')
 ggsave(paste(argv$prefix,'gc.pdf',sep = "."),plot = gg,width = 8,height = 6,device = cairo_pdf)
-

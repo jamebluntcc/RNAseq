@@ -16,8 +16,8 @@ parser.add_argument('--diff_out', help = 'diff analysis result', required = True
 parser.add_argument('--out_dir', help = 'output directory', required = True)
 args = parser.parse_args()
 
-pathview_script = '/home/public/scripts/RNAseq/R/enrichment/kegg_pathview_plot.R'
-kegg_pathway_dir = '/home/public/database/kegg/pathway/'
+pathview_script = '/public/scripts/RNAseq/R/enrichment/kegg_pathview_plot.R'
+kegg_pathway_dir = '/public/database/kegg/pathway/'
 
 exclude_pathway_id = ('01100','01110')
 problem_pathway_id= ('bta04215')

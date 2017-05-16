@@ -7,9 +7,9 @@ suppressMessages(library(RColorBrewer))
 suppressMessages(library(gplots))
 suppressMessages(library(xlsx))
 suppressMessages(library(tibble))
+suppressMessages(library(rhdf5))
+source('/public/scripts/RNAseq/R/quantification/quant_plot.R')
 
-source('/home/public/scripts/RNAseq/R/quantification/quant_plot.R')
-#source('quant_plot.R')
 
 p <- arg_parser("read kallisto quant files and perform differential analysis")
 p <- add_argument(p, '--quant_dir',  help = 'kallisto quantification directory')
@@ -20,7 +20,7 @@ p <- add_argument(p, '--qvalue',     help = 'diff gene qvalue cutoff', default =
 p <- add_argument(p, '--logfc',      help = 'diff gene logfc cutoff',  default = 1)
 argv <- parse_args(p)
 
-## for test
+# ## for test
 # sample_inf <- 'group_sample2'
 # quant_dir <- './kallisto2/'
 # gene2tr_file <- 'gene_trans.map'
@@ -50,7 +50,7 @@ tx2gene <- gene2tr[,c('transcript_id', 'gene_id')]
 
 
 ## normalized expression matrix
-txi <- tximport(files, type = "kallisto", tx2gene = tx2gene, reader = read_tsv)
+txi <- tximport(files, type = "kallisto", tx2gene = tx2gene)
 cts <- txi$counts
 y <- DGEList(cts)
 normfactors <- calcNormFactors(y)
@@ -65,9 +65,9 @@ out_cts <- as.data.frame(cts)
 out_cts <- round(out_cts, 3)
 out_cts <- rownames_to_column(out_cts, var = 'Gene_ID')
 write.table(out_cts, file = paste(expression_stat_dir, 'Gene.count.txt', sep = '/'), quote=F, row.names = F, sep = '\t')
-write.xlsx(out_cts, file = paste(expression_stat_dir, 'Gene.count.xlsx', sep = '/'), sheetName = "gene.count", append = FALSE, row.names = F)
+#write.xlsx(out_cts, file = paste(expression_stat_dir, 'Gene.count.xlsx', sep = '/'), sheetName = "gene.count", append = FALSE, row.names = F)
 write.table(out_gene_tpm_matrix, file = paste(expression_stat_dir, 'Gene.tpm.txt', sep = '/'), quote = F, row.names = F, sep = '\t')
-write.xlsx(out_gene_tpm_matrix, file = paste(expression_stat_dir, 'Gene.tpm.xlsx', sep = '/'), sheetName = "gene.tpm", append = FALSE, row.names = F)
+#write.xlsx(out_gene_tpm_matrix, file = paste(expression_stat_dir, 'Gene.tpm.xlsx', sep = '/'), sheetName = "gene.tpm", append = FALSE, row.names = F)
 
 ## TODO: speed with apply
 ## TODO: parallel
@@ -83,7 +83,7 @@ for (i in seq(dim(all_combine)[2])) {
   each_pair_samples <- samples[samples$sample %in% c(con1_sample, con2_sample),]
   each_pair_files <- file.path(quant_dir, each_pair_samples$sample, "abundance.tsv")
   names(each_pair_files) <- each_pair_samples$sample
-  each_pair_txi <- tximport(each_pair_files, type = "kallisto", tx2gene = tx2gene, reader = read_tsv)
+  each_pair_txi <- tximport(each_pair_files, type = "kallisto", tx2gene = tx2gene)
   each_pair_cts <- each_pair_txi$counts
   each_pair_cts <- each_pair_cts[rowSums(each_pair_cts)>=2,]
   each_pair_genes <- row.names(each_pair_cts)
@@ -100,7 +100,7 @@ for (i in seq(dim(all_combine)[2])) {
   et <- exactTest(y, pair=each_pair)
   tTags <- topTags(et,n=NULL)
   new_tTags <- tTags$table
-  new_tTags <- new_tTags[, !(names(new_tTags) %in% c("logCPM"))]  
+  new_tTags <- new_tTags[, !(names(new_tTags) %in% c("logCPM"))]
   each_pair_matrix <- gene_tpm_matrix[,c(con1_sample, con2_sample)]
   merged_df <- merge(each_pair_matrix, new_tTags, by.x = 0, by.y = 0, all.y = T)
   sorted_merged_df <- arrange(merged_df, FDR)
@@ -110,15 +110,16 @@ for (i in seq(dim(all_combine)[2])) {
   out_file_name_prefix <- paste(each_pair_outdir, '/', each_compare_name, sep = '')
   up_regulate_name_prefix <- paste(each_pair_outdir, '/', each_compare_name, '.',each_pair[2], '-UP',  sep = '')
   down_regulate_name_prefix <- paste(each_pair_outdir, '/', each_compare_name, '.',each_pair[1], '-UP', sep = '')
+  diff_genes <- c()
   up_regulate_df <- filter(sorted_merged_df, logFC >= logfc, FDR <= qvalue)
   down_regulate_df <- filter(sorted_merged_df, logFC <= -(logfc), FDR <= qvalue)
   diff_genes <- c(diff_genes, up_regulate_df$Gene_ID, down_regulate_df$Gene_ID)
   write.table(sorted_merged_df, file=paste(out_file_name_prefix, 'edgeR.DE_results', 'txt', sep = '.'), sep='\t', quote=F, row.names=F)
   write.table(up_regulate_df, file=paste(up_regulate_name_prefix, 'edgeR.DE_results', 'txt', sep = '.'), sep='\t', quote=F, row.names=F)
   write.table(down_regulate_df, file=paste(down_regulate_name_prefix, 'edgeR.DE_results', 'txt', sep = '.'), sep='\t', quote=F, row.names=F)
-  write.xlsx(sorted_merged_df, file = paste(out_file_name_prefix, 'edgeR.DE_results', 'xlsx', sep = '.'), sheetName = each_compare_name, append = F, row.names = F)
-  write.xlsx(up_regulate_df, file = paste(up_regulate_name_prefix, 'edgeR.DE_results', 'xlsx', sep = '.'), sheetName = each_compare_name, append = F, row.names = F)
-  write.xlsx(down_regulate_df, file = paste(down_regulate_name_prefix, 'edgeR.DE_results', 'xlsx', sep = '.'), sheetName = each_compare_name, append = F, row.names = F)
+#  write.xlsx(sorted_merged_df, file = paste(out_file_name_prefix, 'edgeR.DE_results', 'xlsx', sep = '.'), sheetName = each_compare_name, append = F, row.names = F)
+#  write.xlsx(up_regulate_df, file = paste(up_regulate_name_prefix, 'edgeR.DE_results', 'xlsx', sep = '.'), sheetName = each_compare_name, append = F, row.names = F)
+#  write.xlsx(down_regulate_df, file = paste(down_regulate_name_prefix, 'edgeR.DE_results', 'xlsx', sep = '.'), sheetName = each_compare_name, append = F, row.names = F)
   ## write diff gene list
   write(as.character(up_regulate_df$Gene_ID), file = paste(up_regulate_name_prefix, 'edgeR.DE_results.diffgenes', 'txt', sep = '.'), sep = '\n')
   write(as.character(down_regulate_df$Gene_ID), file = paste(down_regulate_name_prefix, 'edgeR.DE_results.diffgenes', 'txt', sep = '.'), sep = '\n')
@@ -136,9 +137,29 @@ out_diff_gene_count_matrix <- filter(out_cts, Gene_ID %in% diff_genes)
 out_diff_gene_tpm_matrix <- filter(out_gene_tpm_matrix, Gene_ID %in% diff_genes)
 
 write.table(out_diff_gene_count_matrix, file = paste(expression_stat_dir, 'Diff.gene.count.txt', sep = '/'), quote=F, row.names = F, sep = '\t')
-write.xlsx(out_diff_gene_count_matrix, file = paste(expression_stat_dir, 'Diff.gene.count.xlsx', sep = '/'), sheetName = "gene.count", append = FALSE, row.names = F)
+#write.xlsx(out_diff_gene_count_matrix, file = paste(expression_stat_dir, 'Diff.gene.count.xlsx', sep = '/'), sheetName = "gene.count", append = FALSE, row.names = F)
 write.table(out_diff_gene_tpm_matrix, file = paste(expression_stat_dir, 'Diff.gene.tpm.txt', sep = '/'), quote = F, row.names = F, sep = '\t')
-write.xlsx(out_diff_gene_tpm_matrix, file = paste(expression_stat_dir, 'Diff.gene.tpm.xlsx', sep = '/'), sheetName = "gene.tpm", append = FALSE, row.names = F)
+#write.xlsx(out_diff_gene_tpm_matrix, file = paste(expression_stat_dir, 'Diff.gene.tpm.xlsx', sep = '/'), sheetName = "gene.tpm", append = FALSE, row.names = F)
+
+# setwd('C:\\work\\project\\mRNA\\2017\\OM-mRNA-20-Wheat-P20170502\\expression')
+# diff_gene_tpm_matrix <- read.delim('Diff.gene.tpm.txt', row.names = 1)
+# samples <- read.delim('group_sample', stringsAsFactors = F, header = F)
+# colnames(samples) <- c('condition', 'sample')
+# expression_stat_dir <- './'
+# diff_gene_tpm_matrix <- diff_gene_tpm_matrix[1:1000, ]
+# colnames(diff_gene_tpm_matrix) <- samples$sample
+# source('C:\\work\\scripts\\atom\\R\\quantification\\quant_plot.R')
+
+# diff_gene_tpm_matrix1 <- diff_gene_tpm_matrix[, 1:5]
+# diff_gene_tpm_matrix1 <- diff_gene_tpm_matrix1[rowSums(diff_gene_tpm_matrix1) >= 2, ]
+# diff_gene_tpm_matrix2 <- diff_gene_tpm_matrix[, 1:10]
+# diff_gene_tpm_matrix2 <- diff_gene_tpm_matrix2[rowSums(diff_gene_tpm_matrix2) >= 2, ]
+# diff_gene_tpm_matrix3 <- diff_gene_tpm_matrix
+# diff_gene_tpm_matrix4 <- cbind(diff_gene_tpm_matrix, diff_gene_tpm_matrix)
+# diff_gene_tpm_matrix5 <- cbind(diff_gene_tpm_matrix, diff_gene_tpm_matrix, diff_gene_tpm_matrix)
+
+# diff_gene_tpm_matrix = read.delim(paste(expression_stat_dir, 'Diff.gene.tpm.txt', sep = '/'), row.names = 1)
+# colnames(diff_gene_tpm_matrix) <- samples$sample
 
 ## heatmap
 om_heatmap(plot_data = diff_gene_tpm_matrix, samples = samples, outdir = expression_stat_dir)
