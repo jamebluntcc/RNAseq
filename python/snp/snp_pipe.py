@@ -136,10 +136,6 @@ class split_ncigar_reads(luigi.Task):
         GATK_PATH,
         '-T',
         'SplitNCigarReads',
-        '-nt',
-        '{}'.format(GATK_THREAD),
-        '-nct',
-        '{}'.format(GATK_NCT),
         '-R',
         '{}'.format(Ref),
         '-I',
@@ -161,7 +157,7 @@ class split_ncigar_reads(luigi.Task):
         '{0}/bam/{1}/{1}.split.bam'.format(OutDir, self.sample)]
 
         split_ncigar_reads_cmd = [split_ncigar_cmd, index_cmd]
-        split_ncigar_reads_log_inf = rum_cmd(split_ncigar_reads_cmd)
+        split_ncigar_reads_log_inf = run_cmd(split_ncigar_reads_cmd)
 
         with self.output().open('w') as split_ncigar_reads_log:
             split_ncigar_reads_log.write(split_ncigar_reads_log_inf)

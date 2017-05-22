@@ -152,11 +152,14 @@ class star_mapping_collection(luigi.Task):
         return star_mapping_summary()
 
     def run(self):
-        with self.output().open('w') as star_mapping_collection_log:
-            star_mapping_collection_log.write('mapping finished!')
+        ignore_files = ['.ignore', 'logs', 'mapping_dir', 'bam_dir', 'mapping_stats.plot', 'Rplots.pdf']
+
+        with self.output().open('w') as ignore_files_inf:
+            for each_file in ignore_files:
+                ignore_files_inf.write('{}\n'.format(each_file))
 
     def output(self):
-        return luigi.LocalTarget('{0}/logs/star_mapping_collection.log'.format(self.OutDir))
+        return luigi.LocalTarget('{}/.ignore'.format(self.OutDir))
 
 
 if __name__ == '__main__':

@@ -131,10 +131,11 @@ class fastqc_collection(luigi.Task):
         return reads_quality_plot()
 
     def run(self):
-        ignore_files = ['.ignore', 'logs', 'fastqc_results/*zip', 'gc_plot/*txt', 'reads_quality_plot/*txt']
-        with self.output().open('w') as ignore_inf:
+        ignore_files = ['.ignore', 'logs', 'fastqc_results/*zip']
+        #include_files = ['fastqc_results/*zip', 'fastqc_results/*html', 'reads_quality_plot', 'gc_plot', 'fastqc_general_stats.*']
+        with self.output().open('w') as ignore_files_inf:
             for each_file in ignore_files:
-                ignore_inf.write('{}\n'.format(each_file))
+                ignore_files_inf.write('{}\n'.format(each_file))
 
     def output(self):
         return luigi.LocalTarget('{}/.ignore'.format(self.OutDir))

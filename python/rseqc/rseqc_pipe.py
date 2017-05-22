@@ -265,11 +265,18 @@ class rseqc_collection(luigi.Task):
         return rseqc_plot()
 
     def run(self):
-        with self.output().open('w') as rseqc_collection_log:
-            rseqc_collection_log.write('rseqc finished!')
+        ignore_files = ['.ignore', 'logs', 'read_duplication/*.DupRate_plot.*',
+        'read_distribution/read_distribution.summary.txt', 'junction_saturation',
+        'inner_distance/*inner_distance_plot*', 'inner_distance/*inner_distance.txt',
+        'infer_experiment', 'genebody_coverage/*geneBodyCoverage.curves.pdf',
+        'genebody_coverage/*geneBodyCoverage.r']
+
+        with self.output().open('w') as ignore_files_inf:
+            for each_file in ignore_files:
+                ignore_files_inf.write('{}\n'.format(each_file))
 
     def output(self):
-        return luigi.LocalTarget('{}/logs/rseqc.log'.format(self.OutDir))
+        return luigi.LocalTarget('{}/.ignore'.format(self.OutDir))
 
 if __name__ == '__main__':
     luigi.run()

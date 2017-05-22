@@ -50,6 +50,7 @@ def run_cmd(cmd_obj):
         sys.exit('unknown cmd format')
     return output
 
+
 ## read confiture
 script_path = path.dirname(path.abspath(__file__))
 configure_file = path.join(script_path, 'configure.ini')

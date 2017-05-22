@@ -25,12 +25,36 @@ import star_mapping_pipe_v2
 import rseqc_pipe
 
 
+class cp_analysis_result(luigi.Task):
+
+    from_dir = luigi.Parameter()
+    to_dir = luigi.Parameter()
+
+    def run(self):
+
+        cp_result_cmd = ['rsync',
+        '-av',
+        '--copy-links',
+        '--exclude-from={}'.format(path.join(self.from_dir, '.ignore')),
+        path.abspath(self.from_dir),
+        path.abspath(self.to_dir)]
+
+        cp_result_inf = run_cmd(cp_result_cmd)
+        with self.output().open('w') as cp_result_inf_log:
+            cp_result_inf_log.write(cp_result_inf)
+
+    def output(self):
+        from_dir_name = path.basename(path.abspath(self.from_dir))
+        return luigi.LocalTarget('{0}/cp_{1}_results.log'.format(log_dir, from_dir_name))
+
+
 class fastqc(luigi.Task):
 
     def requires(self):
         return fastqc_pipe_v2.fastqc_collection(OutDir = fastqc_dir, SampleInf = sample_inf, CleanDir = clean_dir)
 
     def run(self):
+        yield cp_analysis_result(from_dir = fastqc_dir, to_dir = result_dir)
         with self.output().open('w') as fastqc_log_inf:
             fastqc_log_inf.write('fastqc finished!')
 
@@ -44,6 +68,7 @@ class quant(luigi.Task):
         return quant_pipe.quant_collection(OutDir = quant_dir, SampleInf = sample_inf, CleanDir = clean_dir, Transcript = transcript, Gene2Tr = gene_tr)
 
     def run(self):
+        yield cp_analysis_result(from_dir = quant_dir, to_dir = result_dir)
         with self.output().open('w') as quant_log_inf:
             quant_log_inf.write('quantification finished!')
 
@@ -57,6 +82,7 @@ class mapping(luigi.Task):
         return star_mapping_pipe_v2.star_mapping_collection(OutDir = mapping_dir, IndexDir = star_index, SampleInf = sample_inf, CleanDir = clean_dir)
 
     def run(self):
+        yield cp_analysis_result(from_dir = mapping_dir, to_dir = result_dir)
         with self.output().open('w') as mapping_log_inf:
             mapping_log_inf.write('mapping finished!')
 
@@ -70,7 +96,8 @@ class enrich(luigi.Task):
         return quant()
 
     def run(self):
-        yield enrich_pipe.enrichment_collection(QuantDir = quant_dir, OutDir = enrich_dir, GoseqAnno = goseq_ano, TopgoAnno = topgo_ano, GeneLen = gene_len, KEGGAbbr = kegg_abbr, KEGGBlast = kegg_blast, ReRun = 'no', KEGGBackground = kegg_background)
+        yield enrich_pipe.enrichment_collection(QuantDir = quant_dir, OutDir = enrich_dir, GoseqAnno = goseq_ano, TopgoAnno = topgo_ano, GeneLen = gene_len, KEGGAbbr = kegg_abbr, KEGGBlast = kegg_blast, ReRun = 'no')
+        yield cp_analysis_result(from_dir = enrich_dir, to_dir = result_dir)
         with self.output().open('w') as enrich_log_inf:
             enrich_log_inf.write('enrichment finished!')
 
@@ -86,6 +113,7 @@ class rseqc(luigi.Task):
     def run(self):
         bam_dir = path.join(mapping_dir, 'bam_dir')
         yield rseqc_pipe.rseqc_collection(OutDir = rseqc_dir, SampleInf = sample_inf, BamDir = bam_dir, BedFile = bedfile)
+        yield cp_analysis_result(from_dir = rseqc_dir, to_dir = result_dir)
         with self.output().open('w') as rseqc_log_inf:
             rseqc_log_inf.write('rseqc finished!')
 
@@ -119,7 +147,6 @@ class run_pipe(luigi.Task):
     topgo_ano = luigi.Parameter()
     gene_len = luigi.Parameter()
     kegg_abbr = luigi.Parameter()
-    kegg_background = luigi.Parameter(default = "")
     kegg_blast = luigi.Parameter()
     star_index = luigi.Parameter()
     bedfile = luigi.Parameter()
@@ -127,13 +154,14 @@ class run_pipe(luigi.Task):
     def requires(self):
 
         ## global paramters
-        global proj_name, proj_dir, log_dir, clean_dir, sample_inf
+        global proj_name, proj_dir, log_dir, clean_dir, sample_inf, result_dir
         proj_name = self.proj_name
         proj_dir = self.proj_dir
         clean_dir = self.clean_dir
         sample_inf = self.sample_inf
         log_dir = path.join(proj_dir, 'logs')
-        circ_mkdir_unix(log_dir)
+        result_dir = path.join(proj_dir, '{}_analysis'.format(proj_name))
+        map(circ_mkdir_unix, [log_dir, result_dir])
 
         ## fastqc module
         global fastqc_dir
@@ -146,17 +174,13 @@ class run_pipe(luigi.Task):
         gene_tr = self.gene_tr
 
         ## enrich module
-        global enrich_dir, goseq_ano, topgo_ano, gene_len, kegg_abbr, kegg_blast, kegg_background
+        global enrich_dir, goseq_ano, topgo_ano, gene_len, kegg_abbr, kegg_blast
         enrich_dir = path.join(proj_dir, 'enrichment')
         goseq_ano = self.goseq_ano
         topgo_ano = self.topgo_ano
         gene_len = self.gene_len
         kegg_abbr = self.kegg_abbr
         kegg_blast = self.kegg_blast
-        if not self.kegg_background:
-            kegg_background = self.kegg_abbr
-        else:
-            kegg_background = self.kegg_background
 
         ## star mapping module
         global mapping_dir, star_index
@@ -170,9 +194,7 @@ class run_pipe(luigi.Task):
 
         ## run pipeline
         if self.analysis == 'basic':
-            return [fastqc(), enrich()]
-            #return [fastqc(), rseqc(), enrich()]
-            #return rseqc()
+            return [fastqc(), rseqc(), enrich()]
         elif self.analysis == 'advanced':
             return [fastqc(), rseqc(), enrich(), snp(), splicing()]
 

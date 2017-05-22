@@ -153,10 +153,10 @@ if(enrichment_type == 'kegg'){
   kegg_merge_data[dim(kegg_merge_data)[1]+1,] <- kegg_merge_data[dim(kegg_merge_data)[1],]
   kegg_merge_data[dim(kegg_merge_data)[1],c('Input_number','expected')] <- 0
   kegg_merge_data[dim(kegg_merge_data)[1],"color"] <- 'expected'
-  ggsave(filename = paste(output_path,paste(first_level_split[1],"kegg.enrichment.barplot.pdf",sep = "_"),sep = "/"),
+  ggsave(filename = paste(output_path,paste(first_level_split[1],"kegg.enrichment.barplot.pdf",sep = "."),sep = "/"),
          plot = enrich_barplot(kegg_merge_data,break_label1 = unlist(strsplit(first_level_split[1],split = "_vs_"))[1],
                                break_label2 = unlist(strsplit(first_level_split[1],split = "_vs_"))[2]),height = 9,width = dim(kegg_merge_data)[1]/4)
-  ggsave(filename = paste(output_path,paste(first_level_split[1],"kegg.enrichment.barplot.png",sep = "_"),sep = "/"),
+  ggsave(filename = paste(output_path,paste(first_level_split[1],"kegg.enrichment.barplot.png",sep = "."),sep = "/"),
          plot = enrich_barplot(kegg_merge_data,break_label1 = unlist(strsplit(first_level_split[1],split = "_vs_"))[1],
                                break_label2 = unlist(strsplit(first_level_split[1],split = "_vs_"))[2]),height = 9,width = dim(kegg_merge_data)[1]/4,type = "cairo-png")
 }else if(enrichment_type == 'go'){
