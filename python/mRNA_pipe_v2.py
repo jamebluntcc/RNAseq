@@ -121,6 +121,39 @@ class rseqc(luigi.Task):
         return luigi.LocalTarget('{}/rseqc.log'.format(log_dir))
 
 
+class release_analysis_data(luigi.Task):
+
+    def requires(self):
+
+        return mapping()
+
+    def run(self):
+
+        analysis_bam_dir = path.join(mapping_dir, 'bam_dir')
+        out_data_dir = path.join(proj_dir, 'analysis_data')
+        out_bam_dir = path.join(out_data_dir, 'bam')
+        fq_dir = path.join(out_data_dir, 'fq')
+
+        circ_mkdir_unix(out_data_dir)
+
+        ln_fq_cmd = ['ln',
+        '-s',
+        clean_dir,
+        fq_dir]
+
+        ln_bam_cmd = ['ln',
+        '-s',
+        analysis_bam_dir,
+        out_bam_dir]
+
+        link_cmd_inf = run_cmd([ln_fq_cmd, ln_bam_cmd])
+
+        with self.output().open('w') as get_analysis_data_log:
+            get_analysis_data_log.write(link_cmd_inf)
+
+    def output(self):
+        return luigi.LocalTarget('{}/release_analysis_data.log'.format(log_dir))
+
 class snp(luigi.Task):
 
     def requires(self):
@@ -194,9 +227,9 @@ class run_pipe(luigi.Task):
 
         ## run pipeline
         if self.analysis == 'basic':
-            return [fastqc(), rseqc(), enrich()]
+            return [fastqc(), rseqc(), enrich(), release_analysis_data()]
         elif self.analysis == 'advanced':
-            return [fastqc(), rseqc(), enrich(), snp(), splicing()]
+            return [fastqc(), rseqc(), enrich(), snp(), splicing(), release_analysis_data()]
 
     def run(self):
         pass

@@ -24,7 +24,7 @@ def get_kegg_biomart_id(kegg_map_json, sp_latin):
     if sp_latin in kegg_map_dict:
         kegg_sp = kegg_map_dict[sp_latin]
     sp_latin_list = sp_latin.split('_')
-    biomart_sp = '{0}{1}_gene_ensembl'.format(sp_latin_list[0][0], sp_latin_list[1])
+    biomart_sp = '{0}{1}'.format(sp_latin_list[0][0], sp_latin_list[1])
     return kegg_sp, biomart_sp
 
 def get_ip_address():
@@ -98,8 +98,8 @@ GO_ANNO = conf.get(server_name, 'go_anno')
 ## K
 KALLISTO_TO_DIFF = conf.get(server_name, 'kallisto_to_diff')
 KEGG_ANALYSIS_PYTHON = conf.get(server_name, 'kegg_analysis_python')
-KEGG_ANNO_EXTRACT = conf.get(server_name, 'kegg_analysis_python')
-KEGG_BLAST_TR_TO_GENE = conf.get(server_name, 'kegg_analysis_python')
+KEGG_ANNO_EXTRACT = conf.get(server_name, 'kegg_anno_extract')
+KEGG_BLAST_TR_TO_GENE = conf.get(server_name, 'kegg_blast_tr_to_gene')
 
 ## P
 PATHVIEW = conf.get(server_name, 'pathview')

@@ -162,6 +162,12 @@ class tr_blast(luigi.Task):
         '-w',
         '{0}/{1}.transcript.fa'.format(annotation_dir, species_latin)]
 
+        kallisto_index_cmd = ['kallisto',
+        'index',
+        '-i',
+        '{0}/{1}.transcript.fa.kallisto_idx'.format(annotation_dir, species_latin),
+        '{0}/{1}.transcript.fa'.format(annotation_dir, species_latin)]
+
         blast_2_db = ['blastx',
         '-query',
         '{0}/{1}.transcript.fa'.format(annotation_dir, species_latin),
@@ -214,9 +220,9 @@ class ko_annotation(luigi.Task):
         extract_ko_anno = ['python',
         KEGG_ANNO_EXTRACT,
         '{0}/{1}.gene.ko.anno'.format(annotation_dir, species_latin),
-        '{0}/{1}.gene.ko.anno'.format(annotation_dir, species_latin)]
+        '{0}/{1}.gene.ko.anno.tab'.format(annotation_dir, species_latin)]
 
-        kegg_cmd_list = [get_tr_fasta, blast_2_db, blast_tr2gene, kobas_anno, extract_ko_anno]
+        kegg_cmd_list = [blast_tr2gene, kobas_anno, extract_ko_anno]
         kegg_annotation_log_inf = run_cmd(kegg_cmd_list)
 
         with self.output().open('w') as kegg_annotation_log:

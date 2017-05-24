@@ -18,8 +18,23 @@ out_name = argv$output
 
 geneid_info <- read.table(gene_tr_file, header = F, sep = '\t')
 gene_id <- unique(geneid_info$V1)
-ensembl <- useMart("ENSEMBL_MART_ENSEMBL")
-ensembl <- useDataset(data_name, mart = ensembl)
+
+ensembl_animal <- useMart("ENSEMBL_MART_ENSEMBL")
+ensembl_animal_database <- listDatasets(ensembl_animal)
+animal_name <- paste(data_name, 'gene_ensembl', sep = '_')
+
+ensembl_plant <- useMart("plants_mart", host="plants.ensembl.org")
+ensembl_plant_database <- listDatasets(ensembl_plant)
+plant_name <- paste(data_name, 'eg_gene', sep = '_')
+
+if (animal_name %in% ensembl_animal_database[,1]) {
+  ensembl <- useDataset(animal_name, mart = ensembl_animal)
+} else if (plant_name %in% ensembl_plant_database[,1]) {
+  ensembl <- useDataset(plant_name, mart = ensembl_plant)
+} else {
+  stop('animal not in ensembl database')
+}
+
 
 ## go annotation
 goids <- getBM(attributes=c('ensembl_gene_id','go_id'), filters='ensembl_gene_id', values=gene_id, mart=ensembl)

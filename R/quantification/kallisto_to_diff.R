@@ -117,9 +117,9 @@ for (i in seq(dim(all_combine)[2])) {
   write.table(sorted_merged_df, file=paste(out_file_name_prefix, 'edgeR.DE_results', 'txt', sep = '.'), sep='\t', quote=F, row.names=F)
   write.table(up_regulate_df, file=paste(up_regulate_name_prefix, 'edgeR.DE_results', 'txt', sep = '.'), sep='\t', quote=F, row.names=F)
   write.table(down_regulate_df, file=paste(down_regulate_name_prefix, 'edgeR.DE_results', 'txt', sep = '.'), sep='\t', quote=F, row.names=F)
-#  write.xlsx(sorted_merged_df, file = paste(out_file_name_prefix, 'edgeR.DE_results', 'xlsx', sep = '.'), sheetName = each_compare_name, append = F, row.names = F)
-#  write.xlsx(up_regulate_df, file = paste(up_regulate_name_prefix, 'edgeR.DE_results', 'xlsx', sep = '.'), sheetName = each_compare_name, append = F, row.names = F)
-#  write.xlsx(down_regulate_df, file = paste(down_regulate_name_prefix, 'edgeR.DE_results', 'xlsx', sep = '.'), sheetName = each_compare_name, append = F, row.names = F)
+  #write.xlsx(sorted_merged_df, file = paste(out_file_name_prefix, 'edgeR.DE_results', 'xlsx', sep = '.'), sheetName = each_compare_name, append = F, row.names = F)
+  #write.xlsx(up_regulate_df, file = paste(up_regulate_name_prefix, 'edgeR.DE_results', 'xlsx', sep = '.'), sheetName = each_compare_name, append = F, row.names = F)
+  #write.xlsx(down_regulate_df, file = paste(down_regulate_name_prefix, 'edgeR.DE_results', 'xlsx', sep = '.'), sheetName = each_compare_name, append = F, row.names = F)
   ## write diff gene list
   write(as.character(up_regulate_df$Gene_ID), file = paste(up_regulate_name_prefix, 'edgeR.DE_results.diffgenes', 'txt', sep = '.'), sep = '\n')
   write(as.character(down_regulate_df$Gene_ID), file = paste(down_regulate_name_prefix, 'edgeR.DE_results.diffgenes', 'txt', sep = '.'), sep = '\n')
