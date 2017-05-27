@@ -151,7 +151,7 @@ class go_annotation(luigi.Task):
         return luigi.LocalTarget('{}/go_annotation.log'.format(log_dir))
 
 
-class tr_blast(luigi.Task):
+class tr_index(luigi.Task):
 
     def run(self):
 
@@ -167,6 +167,52 @@ class tr_blast(luigi.Task):
         '-i',
         '{0}/{1}.transcript.fa.kallisto_idx'.format(annotation_dir, species_latin),
         '{0}/{1}.transcript.fa'.format(annotation_dir, species_latin)]
+
+        tr_blast_cmd_list = [get_tr_fasta, kallisto_index_cmd]
+        tr_blast_log_inf = run_cmd(tr_blast_cmd_list)
+
+        with self.output().open('w') as tr_blast_log:
+            tr_blast_log.write(tr_blast_log_inf)
+
+    def output(self):
+        return luigi.LocalTarget('{}/tr_index.log'.format(log_dir))
+
+
+class ko_annotation(luigi.Task):
+
+    def requires(self):
+        return tr_index()
+
+    def run(self):
+
+        kegg_cmd_list = []
+        if not path.exists('{0}/{1}.pep.fasta'.format(ko_pep_dir, species_kegg)):
+            down_load_seq_cmd = ['wget',
+            '-c',
+            'http://kobas.cbi.pku.edu.cn/download_file.php?type=seq_pep&filename={}.pep.fasta.gz'.format(species_kegg),
+            '-O',
+            '{0}/{1}.pep.fasta.gz'.format(ko_pep_dir, species_kegg)]
+
+            uncompress_seq_cmd = ['gunzip',
+            '{0}/{1}.pep.fasta.gz'.format(ko_pep_dir, species_kegg)]
+
+            mk_blast_db = ['makeblastdb',
+            '-in',
+            '{0}/{1}.pep.fasta'.format(ko_pep_dir, species_kegg),
+            '-dbtype',
+            'prot']
+
+            down_load_db_cmd = ['wget',
+            '-c',
+            'http://kobas.cbi.pku.edu.cn/download_file.php?type=sqlite3&filename={}.db.gz'.format(species_kegg),
+            '-O',
+            '{0}/{1}.db.gz'.format(ko_db_dir, species_kegg)]
+
+            uncompress_db_cmd = ['gunzip',
+            '{0}/{1}.db.gz'.format(ko_db_dir, species_kegg)]
+
+            kegg_cmd_list.extend([down_load_seq_cmd, uncompress_seq_cmd, mk_blast_db, down_load_db_cmd, uncompress_db_cmd])
+
 
         blast_2_db = ['blastx',
         '-query',
@@ -184,22 +230,6 @@ class tr_blast(luigi.Task):
         '-out',
         '{0}/{1}.tr.kegg.blasttab'.format(annotation_dir, species_latin)]
 
-        tr_blast_cmd_list = [get_tr_fasta, blast_2_db]
-        tr_blast_log_inf = run_cmd(tr_blast_cmd_list)
-
-        with self.output().open('w') as tr_blast_log:
-            tr_blast_log.write(tr_blast_log_inf)
-
-    def output(self):
-        return luigi.LocalTarget('{}/tr_blast.log'.format(log_dir))
-
-
-class ko_annotation(luigi.Task):
-
-    def requires(self):
-        return tr_blast()
-
-    def run(self):
 
         blast_tr2gene = ['python',
         KEGG_BLAST_TR_TO_GENE,
@@ -222,7 +252,7 @@ class ko_annotation(luigi.Task):
         '{0}/{1}.gene.ko.anno'.format(annotation_dir, species_latin),
         '{0}/{1}.gene.ko.anno.tab'.format(annotation_dir, species_latin)]
 
-        kegg_cmd_list = [blast_tr2gene, kobas_anno, extract_ko_anno]
+        kegg_cmd_list.extend([blast_2_db, blast_tr2gene, kobas_anno, extract_ko_anno])
         kegg_annotation_log_inf = run_cmd(kegg_cmd_list)
 
         with self.output().open('w') as kegg_annotation_log:
@@ -239,7 +269,7 @@ class prepare_collection(luigi.Task):
     species_latin = luigi.Parameter()
 
     def requires(self):
-        global ref_fa, genome_dir, ref_gtf, annotation_dir, species_latin, species_ensembl, species_kegg, log_dir, ko_pep_dir
+        global ref_fa, genome_dir, ref_gtf, annotation_dir, species_latin, species_ensembl, species_kegg, log_dir, ko_pep_dir, ko_db_dir
         ref_fa, ref_gtf, species_latin= self.ref_fa, self.ref_gtf, self.species_latin
         species_kegg, species_ensembl = get_kegg_biomart_id(KEGG_ORGANISM_JSON, species_latin)
         genome_dir = path.dirname(ref_fa)
@@ -247,6 +277,7 @@ class prepare_collection(luigi.Task):
         log_dir = path.join(annotation_dir, 'logs')
         kobasrc = config.getrc()
         ko_pep_dir = kobasrc['blastdb']
+        ko_db_dir = kobasrc['kobasdb']
         circ_mkdir_unix(log_dir)
         print ko_pep_dir
 

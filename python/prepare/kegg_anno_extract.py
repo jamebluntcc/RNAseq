@@ -36,4 +36,5 @@ with open(extract_out, 'w') as extract_out_inf:
     for each_gene in gene_ko_dict:
         ko_id = '||'.join(gene_ko_dict[each_gene][0])
         ko_des = '||'.join(gene_ko_dict[each_gene][1])
-        extract_out_inf.write('{each_gene}\t{ko_id}\t{ko_des}\n'.format(**locals()))
+        extract_out_inf.write(
+            '{each_gene}\t{ko_id}\t{ko_des}\n'.format(**locals()))

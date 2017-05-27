@@ -13,16 +13,20 @@ quant_dir = path.join(script_path, 'quantification')
 enrich_dir = path.join(script_path, 'enrichment')
 star_mapping_dir = path.join(script_path, 'star_mapping')
 rseqc_dir = path.join(script_path, 'rseqc')
+snp_dir = path.join(script_path, 'snp')
 sys.path.insert(0, fastqc_dir)
 sys.path.insert(0, quant_dir)
 sys.path.insert(0, enrich_dir)
 sys.path.insert(0, star_mapping_dir)
 sys.path.insert(0, rseqc_dir)
+sys.path.insert(0, snp_dir)
+
 import fastqc_pipe_v2
 import quant_pipe
 import enrich_pipe
 import star_mapping_pipe_v2
 import rseqc_pipe
+import snp_pipe
 
 
 class cp_analysis_result(luigi.Task):
@@ -45,7 +49,7 @@ class cp_analysis_result(luigi.Task):
 
     def output(self):
         from_dir_name = path.basename(path.abspath(self.from_dir))
-        return luigi.LocalTarget('{0}/cp_{1}_results.log'.format(log_dir, from_dir_name))
+        return luigi.LocalTarget('{}/cp_analysis_results.log'.format(log_dir))
 
 
 class fastqc(luigi.Task):
@@ -54,7 +58,6 @@ class fastqc(luigi.Task):
         return fastqc_pipe_v2.fastqc_collection(OutDir = fastqc_dir, SampleInf = sample_inf, CleanDir = clean_dir)
 
     def run(self):
-        yield cp_analysis_result(from_dir = fastqc_dir, to_dir = result_dir)
         with self.output().open('w') as fastqc_log_inf:
             fastqc_log_inf.write('fastqc finished!')
 
@@ -68,7 +71,6 @@ class quant(luigi.Task):
         return quant_pipe.quant_collection(OutDir = quant_dir, SampleInf = sample_inf, CleanDir = clean_dir, Transcript = transcript, Gene2Tr = gene_tr)
 
     def run(self):
-        yield cp_analysis_result(from_dir = quant_dir, to_dir = result_dir)
         with self.output().open('w') as quant_log_inf:
             quant_log_inf.write('quantification finished!')
 
@@ -82,7 +84,6 @@ class mapping(luigi.Task):
         return star_mapping_pipe_v2.star_mapping_collection(OutDir = mapping_dir, IndexDir = star_index, SampleInf = sample_inf, CleanDir = clean_dir)
 
     def run(self):
-        yield cp_analysis_result(from_dir = mapping_dir, to_dir = result_dir)
         with self.output().open('w') as mapping_log_inf:
             mapping_log_inf.write('mapping finished!')
 
@@ -97,7 +98,6 @@ class enrich(luigi.Task):
 
     def run(self):
         yield enrich_pipe.enrichment_collection(QuantDir = quant_dir, OutDir = enrich_dir, GoseqAnno = goseq_ano, TopgoAnno = topgo_ano, GeneLen = gene_len, KEGGAbbr = kegg_abbr, KEGGBlast = kegg_blast, ReRun = 'no')
-        yield cp_analysis_result(from_dir = enrich_dir, to_dir = result_dir)
         with self.output().open('w') as enrich_log_inf:
             enrich_log_inf.write('enrichment finished!')
 
@@ -113,7 +113,6 @@ class rseqc(luigi.Task):
     def run(self):
         bam_dir = path.join(mapping_dir, 'bam_dir')
         yield rseqc_pipe.rseqc_collection(OutDir = rseqc_dir, SampleInf = sample_inf, BamDir = bam_dir, BedFile = bedfile)
-        yield cp_analysis_result(from_dir = rseqc_dir, to_dir = result_dir)
         with self.output().open('w') as rseqc_log_inf:
             rseqc_log_inf.write('rseqc finished!')
 
@@ -159,6 +158,16 @@ class snp(luigi.Task):
     def requires(self):
         return mapping()
 
+    def run(self):
+        bam_dir = path.join(mapping_dir, 'bam_dir')
+        yield snp_pipe.snp_collection(OutDir = snp_dir, SampleInf = sample_inf, BamDir = bam_dir, Ref = genome_fa)
+
+        with self.output().open('w') as snp_log_inf:
+            snp_log_inf.write('snp finished!')
+
+    def output(self):
+        return luigi.LocalTarget('{}/snp.log'.format(log_dir))
+
 
 class splicing(luigi.Task):
 
@@ -183,6 +192,7 @@ class run_pipe(luigi.Task):
     kegg_blast = luigi.Parameter()
     star_index = luigi.Parameter()
     bedfile = luigi.Parameter()
+    genome_fa = luigi.Parameter()
 
     def requires(self):
 
@@ -225,17 +235,27 @@ class run_pipe(luigi.Task):
         rseqc_dir = path.join(proj_dir, 'rseqc')
         bedfile = self.bedfile
 
+        ## snp module
+        global snp_dir, genome_fa
+        snp_dir = path.join(proj_dir, 'snp')
+        genome_fa = self.genome_fa
+
         ## run pipeline
+        global analysis_folders
+        analysis_folders = []
         if self.analysis == 'basic':
+            analysis_folders = [fastqc_dir, quant_dir, enrich_dir, mapping_dir, rseqc_dir]
             return [fastqc(), rseqc(), enrich(), release_analysis_data()]
         elif self.analysis == 'advanced':
-            return [fastqc(), rseqc(), enrich(), snp(), splicing(), release_analysis_data()]
+            return [fastqc(), rseqc(), enrich(), snp(), release_analysis_data()]
 
     def run(self):
-        pass
+        yield [cp_analysis_result(each_folder, result_dir) for each_folder in analysis_folders]
+        with self.output().open('w') as analysis_log:
+            analysis_log.write('analysis finished')
 
     def output(self):
-        pass
+        return luigi.LocalTarget('{}/logs/analysis_finished.log'.format(self.proj_dir))
 
 if __name__ == '__main__':
     luigi.run()

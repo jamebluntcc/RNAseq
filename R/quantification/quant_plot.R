@@ -50,7 +50,7 @@ onmath_color <- c("#386cb0","#fdb462","#7fc97f","#ef3b2c","#662506","#a6cee3","#
 onmath_color_dark <- c(piratepal('eternal'), piratepal('brave'))
 onmath_color_bright <- c(piratepal('appletv'), piratepal('nemo'))
 onmath_color_basel <- c(piratepal('basel'))
-onmath_color_light <- c(brewer.pal(12,'Set3'))
+onmath_color_light <- c(brewer.pal(9,'Set1'))
 
 #color and fill
 scale_color_onmath <- function(...){
@@ -99,14 +99,14 @@ om_heatmap <- function(plot_data, samples, outdir) {
   pheatmap(plot_data,show_rownames=F,annotation_col = ann_color,annotation_colors = ann_colors,
            annotation_legend = T,annotation_names_col = F,
            color=rev(colorRampPalette(brewer.pal(10,"RdYlGn"))(100)),
-           treeheight_row = 0,scale = 'row', fontsize = fontsize, cellwidth = cellwidth)
+           treeheight_row = 0,scale = 'row', fontsize = fontsize, cellwidth = cellwidth, border_color = NA)
   dev.off()
 
   png(paste(outdir,'Diff.genes.heatmap.png', sep = '/'), width = heatmap_width, height = heatmap_heigh,units = 'in', res = 300)
   pheatmap(plot_data,show_rownames=F,annotation_col = ann_color,annotation_colors = ann_colors,
            annotation_legend = T,annotation_names_col = F,
            color=rev(colorRampPalette(brewer.pal(10,"RdYlGn"))(100)),
-           treeheight_row = 0,scale = 'row', fontsize = fontsize, cellwidth = cellwidth)
+           treeheight_row = 0,scale = 'row', fontsize = fontsize, cellwidth = cellwidth, border_color = NA)
   dev.off()
 
 }

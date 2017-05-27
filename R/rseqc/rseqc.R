@@ -38,7 +38,13 @@ read_distribution_df$Sample <- factor(read_distribution_df$Sample, levels = grou
 read_distribution_filter_df <- dplyr::filter(read_distribution_df, Total_bases > 0)
 
 ### plot
-theme_set(theme_onmath() + theme(panel.grid.minor = element_blank(), panel.grid.major = element_blank()))
+theme_set(theme_onmath() + theme(panel.grid.minor = element_blank(),
+                                 panel.grid.major = element_blank(),
+                                 axis.text.x = element_text(angle = -90,color = 'black',
+                                                            vjust = 0.5,hjust = 0,size = rel(1.2)
+                                                            )
+                                )
+          )
 onmath_color <- colorRampPalette(onmath_color_basel)(length(unique(read_distribution_df$Group)))
 p <- ggplot(read_distribution_filter_df, aes(Sample, Tag_count, fill = Group)) +
   geom_bar(colour = 'black', position = "fill", stat = 'identity') +
@@ -84,8 +90,8 @@ gene_body_cov_plot <- ggplot(gene_cov_mdf, aes(variable, value, colour = samples
   scale_color_manual(values = onmath_color) +
   labs(x = "Gene body percentile (5'->3')", y = 'Coverage')
 
-ggsave(filename = paste(genebody_cov_dir,'genebody_coverage.png', sep = '/'), plot = gene_body_cov_plot, type="cairo-png", width = 8, height = 6, dpi = 300)
-ggsave(filename = paste(genebody_cov_dir,'genebody_coverage.pdf', sep = '/'), plot = gene_body_cov_plot, width = 8, height = 6)
+ggsave(filename = paste(genebody_cov_dir,'genebody_coverage.png', sep = '/'), plot = gene_body_cov_plot, type="cairo-png", width = 12, height = 6, dpi = 300)
+ggsave(filename = paste(genebody_cov_dir,'genebody_coverage.pdf', sep = '/'), plot = gene_body_cov_plot, width = 12, height = 6)
 
 ## inner distance
 # inner_distance_files <- file.path('./inner_distance/', paste(group_inf_df$V2, "inner_distance_freq.txt", sep = '.'))
@@ -160,5 +166,5 @@ reads_duplication_plot <- ggplot(reads_duplication_df, aes(Occurrence, proportio
   scale_color_manual(values = onmath_color) +
   labs(x = 'Occurrence of reads', y = 'Percent of reads')
 
-ggsave(filename = paste(reads_duplication_dir,'reads_duplication.png', sep = '/'), plot = reads_duplication_plot, type="cairo-png", width = 6, height = 6, dpi = 300)
-ggsave(filename = paste(reads_duplication_dir,'reads_duplication.pdf', sep = '/'), plot = reads_duplication_plot, width = 6, height = 6)
+ggsave(filename = paste(reads_duplication_dir,'reads_duplication.png', sep = '/'), plot = reads_duplication_plot, type="cairo-png", width = 12, height = 6, dpi = 300)
+ggsave(filename = paste(reads_duplication_dir,'reads_duplication.pdf', sep = '/'), plot = reads_duplication_plot, width = 12, height = 6)

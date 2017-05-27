@@ -46,5 +46,5 @@ with open(gene_go_detail, 'w') as gene_go_detail_inf:
         go_id = '||'.join(gene_go_dict[each_gene][0])
         go_ontology = '||'.join(gene_go_dict[each_gene][1])
         go_term = '||'.join(gene_go_dict[each_gene][2])
-        gene_go_detail_inf.write('{each_gene}\t{go_id}\t{go_ontology}\t{go_term}\n'.format(**locals()))
-
+        gene_go_detail_inf.write(
+            '{each_gene}\t{go_id}\t{go_ontology}\t{go_term}\n'.format(**locals()))
