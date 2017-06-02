@@ -141,6 +141,7 @@ FASTQC_PIPE = conf.get(server_name, 'fastqc_pipe')
 FASTQC_SUMMERY = conf.get(server_name, 'fastqc_data_info')
 
 # G
+GET_AS_SUMMARY_PLOT_DATA = conf.get(server_name, 'get_as_summary_plot_data')
 GC_PLOT = conf.get(server_name, 'gc_plot')
 GO_ANALYSIS_R = conf.get(server_name, 'go_analysis_r')
 GO_ANNO = conf.get(server_name, 'go_anno')
@@ -163,6 +164,7 @@ RSEQC_PLOT_R = conf.get(server_name, 'rseqc_plot_r')
 
 
 # S
+SIG_AS_PLOT = conf.get(server_name, 'sig_as_plot')
 SNP_PLOT = conf.get(server_name, 'snp_plot')
 STAR_MAPPING_STATS = conf.get(server_name, 'star_mapping_stats')
 STAR_MAPPING_STATS_PLOT = conf.get(server_name, 'star_mapping_stats_plot')

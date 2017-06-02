@@ -13,6 +13,7 @@ from RNAseq_lib import GC_PLOT
 from RNAseq_lib import RQ_PLOT
 from RNAseq_lib import run_cmd
 
+
 class prepare(luigi.Task):
     '''
     prepare directory and others
@@ -22,16 +23,18 @@ class prepare(luigi.Task):
         log_dir = path.join(OutDir, 'logs')
         fastqc_outdir = path.join(OutDir, 'fastqc_results')
         tmp = run_cmd(['mkdir',
-                        '-p',
-                        log_dir,
-                        fastqc_outdir])
+                       '-p',
+                       log_dir,
+                       fastqc_outdir])
         with self.output().open('w') as prepare_logs:
-            prepare_logs.write('prepare finished')
+            prepare_logs.write(tmp)
 
     def output(self):
         return luigi.LocalTarget('{}/logs/prepare.log'.format(OutDir))
 
-## run fastqc
+# run fastqc
+
+
 class run_fastqc(luigi.Task):
     '''
     run fastqc
@@ -46,33 +49,35 @@ class run_fastqc(luigi.Task):
 
     def run(self):
         tmp = run_cmd([FASTQC,
-                        '{0}/{1}_1.clean.fq.gz'.format(CleanDir, self.sample),
-                        '{0}/{1}_2.clean.fq.gz'.format(CleanDir, self.sample),
-                        '--extract',
-                        '-o',
-                        '{}/fastqc_results'.format(OutDir)])
+                       '{0}/{1}_1.clean.fq.gz'.format(CleanDir, self.sample),
+                       '{0}/{1}_2.clean.fq.gz'.format(CleanDir, self.sample),
+                       '--extract',
+                       '-o',
+                       '{}/fastqc_results'.format(OutDir)])
         with self.output().open('w') as qc_logs:
             qc_logs.write(tmp)
 
-class fastqc_summary(luigi.Task) :
+
+class fastqc_summary(luigi.Task):
     '''
     generate summary table
     '''
 
     def requires(self):
-        return [run_fastqc(sample = sample) for sample in sample_list]
+        return [run_fastqc(sample=sample) for sample in sample_list]
 
     def run(self):
         tmp = run_cmd(['python',
-                        FASTQC_SUMMERY,
-                        '{}'.format(SampleInf),
-                        '{}'.format(OutDir),
-                        '{}/fastqc_general_stats'.format(OutDir)])
+                       FASTQC_SUMMERY,
+                       '{}'.format(SampleInf),
+                       '{}'.format(OutDir),
+                       '{}/fastqc_general_stats'.format(OutDir)])
         with self.output().open('w') as qc_summary:
             qc_summary.write(tmp)
 
     def output(self):
         return luigi.LocalTarget('{}/logs/fastqc_summary.log'.format(OutDir))
+
 
 class gc_plot(luigi.Task):
     '''
@@ -84,19 +89,21 @@ class gc_plot(luigi.Task):
         return fastqc_summary()
 
     def run(self):
-        gc_file = path.join(OutDir, 'gc_plot', '{0}.gc.txt'.format(self.sample))
+        gc_file = path.join(OutDir, 'gc_plot',
+                            '{0}.gc.txt'.format(self.sample))
         out_prefix = path.join(OutDir, 'gc_plot', self.sample)
         tmp = run_cmd(['Rscript',
-        GC_PLOT,
-        '--gcfile',
-        gc_file,
-        '--prefix',
-        out_prefix])
+                       GC_PLOT,
+                       '--gcfile',
+                       gc_file,
+                       '--prefix',
+                       out_prefix])
         with self.output().open('w') as gc_plot_log:
             gc_plot_log.write(tmp)
 
     def output(self):
         return luigi.LocalTarget('{0}/logs/{1}.gc.log'.format(OutDir, self.sample))
+
 
 class reads_quality_plot(luigi.Task):
     '''
@@ -104,17 +111,18 @@ class reads_quality_plot(luigi.Task):
     '''
 
     def requires(self):
-        return [gc_plot(sample = sample) for sample in sample_list]
+        return [gc_plot(sample=sample) for sample in sample_list]
 
     def run(self):
         tmp = run_cmd(['Rscript',
-        RQ_PLOT,
-        '{}/reads_quality_plot/'.format(OutDir)])
+                       RQ_PLOT,
+                       '{}/reads_quality_plot/'.format(OutDir)])
         with self.output().open('w') as reads_quality_plot_log:
             reads_quality_plot_log.write(tmp)
 
     def output(self):
         return luigi.LocalTarget('{}/logs/reads_quality_plot.log'.format(OutDir))
+
 
 class fastqc_collection(luigi.Task):
 
@@ -132,13 +140,13 @@ class fastqc_collection(luigi.Task):
 
     def run(self):
         ignore_files = ['.ignore', 'logs', 'fastqc_results/*zip']
-        #include_files = ['fastqc_results/*zip', 'fastqc_results/*html', 'reads_quality_plot', 'gc_plot', 'fastqc_general_stats.*']
         with self.output().open('w') as ignore_files_inf:
             for each_file in ignore_files:
                 ignore_files_inf.write('{}\n'.format(each_file))
 
     def output(self):
         return luigi.LocalTarget('{}/.ignore'.format(self.OutDir))
+
 
 if __name__ == '__main__':
     luigi.run()

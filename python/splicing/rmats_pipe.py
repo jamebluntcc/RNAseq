@@ -10,6 +10,8 @@ sys.path.insert(0, RNAseq_lib_path)
 from RNAseq_lib import run_cmd
 from RNAseq_lib import get_diff_splicing_table
 from RNAseq_lib import get_diff_as_plot_cmd
+from RNAseq_lib import GET_AS_SUMMARY_PLOT_DATA
+from RNAseq_lib import SIG_AS_PLOT
 
 splicing_difference_cutoff = '0.0001'
 analysis_type = 'U'
@@ -23,13 +25,11 @@ class prepare(luigi.Task):
     def run(self):
         log_dir = path.join(OutDir, 'logs')
         rmats_dir = path.join(OutDir, 'rmats')
-        plot_dir = path.join(OutDir, 'sashimiplot')
 
         tmp = run_cmd(['mkdir',
                        '-p',
                        log_dir,
-                       rmats_dir,
-                       plot_dir])
+                       rmats_dir])
 
         with self.output().open('w') as prepare_log:
             prepare_log.write(tmp)
@@ -176,13 +176,46 @@ class rmats_sashimiplot(luigi.Task):
         with open(sh_script, 'w') as sh_script_inf:
             for each_cmd in t_and_j_plot_cmd:
                 sh_script_inf.write('{}\n'.format(' '.join(each_cmd)))
-        run_sh_script = ['sh',sh_script]
+        run_sh_script = ['sh', sh_script]
         plot_cmd_log_inf = run_cmd(run_sh_script)
         with self.output().open('w') as plot_cmd_log:
             plot_cmd_log.write(plot_cmd_log_inf)
 
     def output(self):
         return luigi.LocalTarget('{0}/logs/{1}_vs_{2}.diff_splicing_plot.log'.format(OutDir, self.compare[0], self.compare[1]))
+
+
+class rmats_summary_plot(luigi.Task):
+
+    compare = luigi.Parameter()
+
+    def requires(self):
+        return extract_diff_splicing(compare=self.compare)
+
+    def run(self):
+        group1, group2 = self.compare
+        compare_name = '{0}_vs_{1}'.format(group1, group2)
+        summary_file = path.join(OutDir, 'rmats', compare_name, 'summary.txt')
+        summary_plot_file = path.join(
+            OutDir, 'rmats', compare_name, '{}.summary.plot.txt'.format(compare_name))
+        plot_out_dir = path.join(OutDir, compare_name)
+        get_plot_file_cmd = ['sh',
+                             GET_AS_SUMMARY_PLOT_DATA,
+                             summary_file,
+                             summary_plot_file]
+
+        plot_cmd = ['Rscript',
+                    SIG_AS_PLOT,
+                    '--as_summary',
+                    summary_plot_file,
+                    '--out_dir',
+                    plot_out_dir]
+        plot_cmd_log_inf = run_cmd([get_plot_file_cmd, plot_cmd])
+        with self.output().open('w') as plot_cmd_log:
+            plot_cmd_log.write(plot_cmd_log_inf)
+
+    def output(self):
+        return luigi.LocalTarget('{0}/logs/{1}_vs_{2}.summary_plot.log'.format(OutDir, self.compare[0], self.compare[1]))
 
 
 class rmats_collection(luigi.Task):
@@ -202,13 +235,16 @@ class rmats_collection(luigi.Task):
         compare_list = itertools.combinations(
             group_sample_df.index.unique(), 2)
 
-        return [rmats_sashimiplot(compare=each_compare) for each_compare in compare_list]
+        return [rmats_summary_plot(compare=each_compare) for each_compare in compare_list]
 
     def run(self):
-        pass
+        ignore_files = ['.ignore', 'logs', 'rmats']
+        with self.output().open('w') as ignore_files_inf:
+            for each_file in ignore_files:
+                ignore_files_inf.write('{}\n'.format(each_file))
 
     def output(self):
-        pass
+        return luigi.LocalTarget('{}/logs/rmats_collection.log'.format(self.OutDir))
 
 
 if __name__ == '__main__':

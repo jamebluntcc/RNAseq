@@ -1,4 +1,3 @@
-import subprocess
 import luigi
 from os import path
 import sys
@@ -30,16 +29,16 @@ class prepare(luigi.Task):
         infer_experiment = path.join(OutDir, 'infer_experiment')
 
         tmp = run_cmd(['mkdir',
-                        '-p',
-                        log_dir,
-                        read_distribution,
-                        genebody_coverage,
-                        inner_distance,
-                        junction_saturation,
-                        read_duplication,
-                        infer_experiment])
+                       '-p',
+                       log_dir,
+                       read_distribution,
+                       genebody_coverage,
+                       inner_distance,
+                       junction_saturation,
+                       read_duplication,
+                       infer_experiment])
         with self.output().open('w') as prepare_logs:
-            prepare_logs.write('prepare finished')
+            prepare_logs.write(tmp)
 
     def output(self):
         return luigi.LocalTarget('{}/logs/prepare.log'.format(OutDir))
@@ -57,10 +56,10 @@ class read_distribution(luigi.Task):
 
     def run(self):
         tmp = run_cmd(['read_distribution.py',
-        '-i',
-        '{0}/{1}.bam'.format(BamDir, self.sample),
-        '-r',
-        BedFile])
+                       '-i',
+                       '{0}/{1}.bam'.format(BamDir, self.sample),
+                       '-r',
+                       BedFile])
         with self.output().open('w') as read_distribution_inf:
             read_distribution_inf.write(tmp)
 
@@ -77,16 +76,16 @@ class genebody_coverage(luigi.Task):
     sample = luigi.Parameter()
 
     def requires(self):
-        return [read_distribution(sample = sample) for sample in sample_list]
+        return [read_distribution(sample=sample) for sample in sample_list]
 
     def run(self):
         tmp = run_cmd(['geneBody_coverage.py',
-        '-i',
-        '{0}/{1}.bam'.format(BamDir, self.sample),
-        '-r',
-        BedFile,
-        '-o',
-        '{0}/genebody_coverage/{1}'.format(OutDir, self.sample)])
+                       '-i',
+                       '{0}/{1}.bam'.format(BamDir, self.sample),
+                       '-r',
+                       BedFile,
+                       '-o',
+                       '{0}/genebody_coverage/{1}'.format(OutDir, self.sample)])
         with self.output().open('w') as genebody_coverage_log:
             genebody_coverage_log.write(tmp)
 
@@ -103,16 +102,16 @@ class inner_distance(luigi.Task):
     sample = luigi.Parameter()
 
     def requires(self):
-        return [genebody_coverage(sample = sample) for sample in sample_list]
+        return [genebody_coverage(sample=sample) for sample in sample_list]
 
     def run(self):
         tmp = run_cmd(['inner_distance.py',
-        '-i',
-        '{0}/{1}.bam'.format(BamDir, self.sample),
-        '-r',
-        BedFile,
-        '-o',
-        '{0}/inner_distance/{1}'.format(OutDir, self.sample)])
+                       '-i',
+                       '{0}/{1}.bam'.format(BamDir, self.sample),
+                       '-r',
+                       BedFile,
+                       '-o',
+                       '{0}/inner_distance/{1}'.format(OutDir, self.sample)])
         with self.output().open('w') as inner_distance_log:
             inner_distance_log.write(tmp)
 
@@ -129,16 +128,16 @@ class junction_saturation(luigi.Task):
     sample = luigi.Parameter()
 
     def requires(self):
-        return [inner_distance(sample = sample) for sample in sample_list]
+        return [inner_distance(sample=sample) for sample in sample_list]
 
     def run(self):
         tmp = run_cmd(['junction_saturation.py',
-        '-i',
-        '{0}/{1}.bam'.format(BamDir, self.sample),
-        '-r',
-        BedFile,
-        '-o',
-        '{0}/junction_saturation/{1}'.format(OutDir, self.sample)])
+                       '-i',
+                       '{0}/{1}.bam'.format(BamDir, self.sample),
+                       '-r',
+                       BedFile,
+                       '-o',
+                       '{0}/junction_saturation/{1}'.format(OutDir, self.sample)])
         with self.output().open('w') as junction_saturation_log:
             junction_saturation_log.write(tmp)
 
@@ -156,14 +155,14 @@ class read_duplication(luigi.Task):
     sample = luigi.Parameter()
 
     def requires(self):
-        return [junction_saturation(sample = sample) for sample in sample_list]
+        return [junction_saturation(sample=sample) for sample in sample_list]
 
     def run(self):
         tmp = run_cmd(['read_duplication.py',
-        '-i',
-        '{0}/{1}.bam'.format(BamDir, self.sample),
-        '-o',
-        '{0}/read_duplication/{1}'.format(OutDir, self.sample)])
+                       '-i',
+                       '{0}/{1}.bam'.format(BamDir, self.sample),
+                       '-o',
+                       '{0}/read_duplication/{1}'.format(OutDir, self.sample)])
         with self.output().open('w') as read_duplication_log:
             read_duplication_log.write(tmp)
 
@@ -180,14 +179,14 @@ class infer_experiment(luigi.Task):
     sample = luigi.Parameter()
 
     def requires(self):
-        return [read_duplication(sample = sample) for sample in sample_list]
+        return [read_duplication(sample=sample) for sample in sample_list]
 
     def run(self):
         tmp = run_cmd(['infer_experiment.py',
-        '-i',
-        '{0}/{1}.bam'.format(BamDir, self.sample),
-        '-r',
-        BedFile])
+                       '-i',
+                       '{0}/{1}.bam'.format(BamDir, self.sample),
+                       '-r',
+                       BedFile])
         with self.output().open('w') as infer_experiment_log:
             infer_experiment_log.write(tmp)
 
@@ -201,13 +200,13 @@ class read_duplication_plot_prepare(luigi.Task):
     '''
 
     def requires(self):
-        return [infer_experiment(sample = sample) for sample in sample_list]
+        return [infer_experiment(sample=sample) for sample in sample_list]
 
     def run(self):
         tmp = run_cmd(['python',
-        READ_DISTRIBUTION_PLOT_PREPARE,
-        SampleInf,
-        '{0}/read_distribution/'.format(OutDir)])
+                       READ_DISTRIBUTION_PLOT_PREPARE,
+                       SampleInf,
+                       '{0}/read_distribution/'.format(OutDir)])
 
         with self.output().open('w') as read_distribution_plot_prepare_logs:
             read_distribution_plot_prepare_logs.write(tmp)
@@ -227,17 +226,17 @@ class rseqc_plot(luigi.Task):
 
     def run(self):
         tmp = run_cmd(['Rscript',
-        RSEQC_PLOT_R,
-        '--sample_inf',
-        SampleInf,
-        '--read_distribution_dir',
-        '{}/read_distribution'.format(OutDir),
-        '--genebody_cov_dir',
-        '{}/genebody_coverage'.format(OutDir),
-        '--inner_distance_dir',
-        '{}/inner_distance'.format(OutDir),
-        '--reads_duplication_dir',
-        '{}/read_duplication'.format(OutDir)])
+                       RSEQC_PLOT_R,
+                       '--sample_inf',
+                       SampleInf,
+                       '--read_distribution_dir',
+                       '{}/read_distribution'.format(OutDir),
+                       '--genebody_cov_dir',
+                       '{}/genebody_coverage'.format(OutDir),
+                       '--inner_distance_dir',
+                       '{}/inner_distance'.format(OutDir),
+                       '--reads_duplication_dir',
+                       '{}/read_duplication'.format(OutDir)])
 
         with self.output().open('w') as rseqc_plot_logs:
             rseqc_plot_logs.write(tmp)
@@ -261,15 +260,16 @@ class rseqc_collection(luigi.Task):
         BamDir = self.BamDir
         BedFile = self.BedFile
         # UpstreamTask = self.UpstreamTask
-        sample_list = [each.strip().split()[1] for each in open(self.SampleInf)]
+        sample_list = [each.strip().split()[1]
+                       for each in open(self.SampleInf)]
         return rseqc_plot()
 
     def run(self):
         ignore_files = ['.ignore', 'logs', 'read_duplication/*.DupRate_plot.*',
-        'read_distribution/read_distribution.summary.txt', 'junction_saturation',
-        'inner_distance/*inner_distance_plot*', 'inner_distance/*inner_distance.txt',
-        'infer_experiment', 'genebody_coverage/*geneBodyCoverage.curves.pdf',
-        'genebody_coverage/*geneBodyCoverage.r']
+                        'read_distribution/read_distribution.summary.txt', 'junction_saturation',
+                        'inner_distance/*inner_distance_plot*', 'inner_distance/*inner_distance.txt',
+                        'infer_experiment', 'genebody_coverage/*geneBodyCoverage.curves.pdf',
+                        'genebody_coverage/*geneBodyCoverage.r']
 
         with self.output().open('w') as ignore_files_inf:
             for each_file in ignore_files:
@@ -277,6 +277,7 @@ class rseqc_collection(luigi.Task):
 
     def output(self):
         return luigi.LocalTarget('{}/.ignore'.format(self.OutDir))
+
 
 if __name__ == '__main__':
     luigi.run()
