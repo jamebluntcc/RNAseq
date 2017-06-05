@@ -9,6 +9,7 @@ sys.path.insert(0, RNAseq_lib_path)
 from RNAseq_lib import run_cmd
 from RNAseq_lib import READ_DISTRIBUTION_PLOT_PREPARE
 from RNAseq_lib import RSEQC_PLOT_R
+from python_tools import write_obj_to_json
 
 
 class prepare(luigi.Task):
@@ -16,8 +17,7 @@ class prepare(luigi.Task):
     prepare directory and others
     '''
 
-    # def requires(self):
-    #     return UpstreamTask
+    OutDir = luigi.Parameter()
 
     def run(self):
         log_dir = path.join(OutDir, 'logs')
@@ -50,9 +50,10 @@ class read_distribution(luigi.Task):
     '''
 
     sample = luigi.Parameter()
+    OutDir = luigi.Parameter()
 
     def requires(self):
-        return prepare()
+        return prepare(OutDir=OutDir)
 
     def run(self):
         tmp = run_cmd(['read_distribution.py',
@@ -74,9 +75,10 @@ class genebody_coverage(luigi.Task):
     '''
 
     sample = luigi.Parameter()
+    OutDir = luigi.Parameter()
 
     def requires(self):
-        return [read_distribution(sample=sample) for sample in sample_list]
+        return [read_distribution(sample=sample, OutDir=OutDir) for sample in sample_list]
 
     def run(self):
         tmp = run_cmd(['geneBody_coverage.py',
@@ -98,11 +100,11 @@ class inner_distance(luigi.Task):
     inner distance
 
     '''
-
+    OutDir = luigi.Parameter()
     sample = luigi.Parameter()
 
     def requires(self):
-        return [genebody_coverage(sample=sample) for sample in sample_list]
+        return [genebody_coverage(sample=sample, OutDir=OutDir) for sample in sample_list]
 
     def run(self):
         tmp = run_cmd(['inner_distance.py',
@@ -126,9 +128,10 @@ class junction_saturation(luigi.Task):
     '''
 
     sample = luigi.Parameter()
+    OutDir = luigi.Parameter()
 
     def requires(self):
-        return [inner_distance(sample=sample) for sample in sample_list]
+        return [inner_distance(sample=sample, OutDir=OutDir) for sample in sample_list]
 
     def run(self):
         tmp = run_cmd(['junction_saturation.py',
@@ -151,11 +154,11 @@ class read_duplication(luigi.Task):
     read duplication
 
     '''
-
+    OutDir = luigi.Parameter()
     sample = luigi.Parameter()
 
     def requires(self):
-        return [junction_saturation(sample=sample) for sample in sample_list]
+        return [junction_saturation(sample=sample, OutDir=OutDir) for sample in sample_list]
 
     def run(self):
         tmp = run_cmd(['read_duplication.py',
@@ -175,11 +178,11 @@ class infer_experiment(luigi.Task):
     infer experiment
 
     '''
-
+    OutDir = luigi.Parameter()
     sample = luigi.Parameter()
 
     def requires(self):
-        return [read_duplication(sample=sample) for sample in sample_list]
+        return [read_duplication(sample=sample, OutDir=OutDir) for sample in sample_list]
 
     def run(self):
         tmp = run_cmd(['infer_experiment.py',
@@ -198,9 +201,10 @@ class read_duplication_plot_prepare(luigi.Task):
     '''
     collection read duplication plot data
     '''
+    OutDir = luigi.Parameter()
 
     def requires(self):
-        return [infer_experiment(sample=sample) for sample in sample_list]
+        return [infer_experiment(sample=sample, OutDir=OutDir) for sample in sample_list]
 
     def run(self):
         tmp = run_cmd(['python',
@@ -220,9 +224,10 @@ class rseqc_plot(luigi.Task):
     '''
     rseqc data plot
     '''
+    OutDir = luigi.Parameter()
 
     def requires(self):
-        return read_duplication_plot_prepare()
+        return read_duplication_plot_prepare(OutDir=OutDir)
 
     def run(self):
         tmp = run_cmd(['Rscript',
@@ -262,15 +267,18 @@ class rseqc_collection(luigi.Task):
         # UpstreamTask = self.UpstreamTask
         sample_list = [each.strip().split()[1]
                        for each in open(self.SampleInf)]
-        return rseqc_plot()
+        return rseqc_plot(OutDir=OutDir)
 
     def run(self):
         ignore_files = ['.ignore', 'logs', 'read_duplication/*.DupRate_plot.*',
                         'read_distribution/read_distribution.summary.txt', 'junction_saturation',
                         'inner_distance/*inner_distance_plot*', 'inner_distance/*inner_distance.txt',
                         'infer_experiment', 'genebody_coverage/*geneBodyCoverage.curves.pdf',
-                        'genebody_coverage/*geneBodyCoverage.r']
-
+                        'genebody_coverage/*geneBodyCoverage.r', 'Rplots.pdf']
+        pdf_report_files = ['inner_distance/inner_distance.bar.png', 'read_duplication/reads_duplication.point.png',
+                            'genebody_coverage/genebody_coverage.point.png', 'read_distribution/read_distribution.bar.png']
+        pdf_report_ini = path.join(self.OutDir, '.pdf_files')
+        write_obj_to_json(pdf_report_files, pdf_report_ini)
         with self.output().open('w') as ignore_files_inf:
             for each_file in ignore_files:
                 ignore_files_inf.write('{}\n'.format(each_file))

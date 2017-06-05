@@ -12,12 +12,14 @@ from RNAseq_lib import FASTQC
 from RNAseq_lib import GC_PLOT
 from RNAseq_lib import RQ_PLOT
 from RNAseq_lib import run_cmd
+from python_tools import write_obj_to_json
 
 
 class prepare(luigi.Task):
     '''
     prepare directory and others
     '''
+    OutDir = luigi.Parameter()
 
     def run(self):
         log_dir = path.join(OutDir, 'logs')
@@ -40,9 +42,10 @@ class run_fastqc(luigi.Task):
     run fastqc
     '''
     sample = luigi.Parameter()
+    OutDir = luigi.Parameter()
 
     def requires(self):
-        return prepare()
+        return prepare(OutDir=OutDir)
 
     def output(self):
         return luigi.LocalTarget('{0}/logs/{1}.log'.format(OutDir, self.sample))
@@ -62,9 +65,10 @@ class fastqc_summary(luigi.Task):
     '''
     generate summary table
     '''
+    OutDir = luigi.Parameter()
 
     def requires(self):
-        return [run_fastqc(sample=sample) for sample in sample_list]
+        return [run_fastqc(sample=sample, OutDir=OutDir) for sample in sample_list]
 
     def run(self):
         tmp = run_cmd(['python',
@@ -83,40 +87,42 @@ class gc_plot(luigi.Task):
     '''
     plot gc graph
     '''
-    sample = luigi.Parameter()
+    OutDir = luigi.Parameter()
 
     def requires(self):
-        return fastqc_summary()
+        return fastqc_summary(OutDir=OutDir)
 
     def run(self):
-        gc_file = path.join(OutDir, 'gc_plot',
-                            '{0}.gc.txt'.format(self.sample))
-        out_prefix = path.join(OutDir, 'gc_plot', self.sample)
+        gc_dir = path.join(OutDir, 'gc_plot')
         tmp = run_cmd(['Rscript',
                        GC_PLOT,
-                       '--gcfile',
-                       gc_file,
-                       '--prefix',
-                       out_prefix])
+                       '--gc_dir',
+                       gc_dir,
+                       '--out_dir',
+                       gc_dir,
+                       '--sample_inf',
+                       SampleInf])
         with self.output().open('w') as gc_plot_log:
             gc_plot_log.write(tmp)
 
     def output(self):
-        return luigi.LocalTarget('{0}/logs/{1}.gc.log'.format(OutDir, self.sample))
+        return luigi.LocalTarget('{0}/logs/gc_plot.log'.format(OutDir))
 
 
 class reads_quality_plot(luigi.Task):
     '''
     plot reads quality
     '''
+    OutDir = luigi.Parameter()
 
     def requires(self):
-        return [gc_plot(sample=sample) for sample in sample_list]
+        return fastqc_summary(OutDir=OutDir)
 
     def run(self):
         tmp = run_cmd(['Rscript',
                        RQ_PLOT,
-                       '{}/reads_quality_plot/'.format(OutDir)])
+                       '{}/reads_quality_plot/'.format(OutDir),
+                       SampleInf])
         with self.output().open('w') as reads_quality_plot_log:
             reads_quality_plot_log.write(tmp)
 
@@ -136,10 +142,14 @@ class fastqc_collection(luigi.Task):
         SampleInf = self.SampleInf
         CleanDir = self.CleanDir
         sample_list = [each.strip().split()[1] for each in open(SampleInf)]
-        return reads_quality_plot()
+        return [reads_quality_plot(OutDir=OutDir), gc_plot(OutDir=OutDir)]
 
     def run(self):
-        ignore_files = ['.ignore', 'logs', 'fastqc_results/*zip']
+        ignore_files = ['.ignore', 'logs', 'fastqc_results/*zip', '.pdf_files']
+        pdf_report_files = ['fastqc_general_stats.txt',
+                            'gc_plot/gc_distribution.line.png', 'reads_quality_plot/reads_quality.bar.png']
+        pdf_report_ini = path.join(self.OutDir, '.pdf_files')
+        write_obj_to_json(pdf_report_files, pdf_report_ini)
         with self.output().open('w') as ignore_files_inf:
             for each_file in ignore_files:
                 ignore_files_inf.write('{}\n'.format(each_file))

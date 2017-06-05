@@ -1,4 +1,3 @@
-import subprocess
 import luigi
 from os import path
 from os import listdir
@@ -20,8 +19,7 @@ class prepare(luigi.Task):
 
     '''
 
-    # def requires(self):
-    #     return UpstreamTask
+    OutDir = luigi.Parameter()
 
     def run(self):
 
@@ -30,38 +28,41 @@ class prepare(luigi.Task):
         kegg_dir = path.join(OutDir, 'kegg')
 
         tmp = run_cmd(['mkdir',
-        '-p',
-        log_dir,
-        go_dir,
-        kegg_dir])
+                       '-p',
+                       log_dir,
+                       go_dir,
+                       kegg_dir])
 
         with self.output().open('w') as prepare_logs:
-            prepare_logs.write('prepare finished')
+            prepare_logs.write(tmp)
 
     def output(self):
         return luigi.LocalTarget('{}/logs/prepare.log'.format(OutDir))
+
 
 class run_go(luigi.Task):
     '''
     run go enrichment analysis
     '''
 
+    OutDir = luigi.Parameter()
+
     def requires(self):
-        return prepare()
+        return prepare(OutDir=OutDir)
 
     def run(self):
         tmp = run_cmd(['Rscript',
-        GO_ANALYSIS_R,
-        '--quant_dir',
-        QuantDir,
-        '--go_anno',
-        GoseqAnno,
-        '--gene_length',
-        GeneLen,
-        '--topgo_anno',
-        TopgoAnno,
-        '--out_dir',
-        OutDir])
+                       GO_ANALYSIS_R,
+                       '--quant_dir',
+                       QuantDir,
+                       '--go_anno',
+                       GoseqAnno,
+                       '--gene_length',
+                       GeneLen,
+                       '--topgo_anno',
+                       TopgoAnno,
+                       '--out_dir',
+                       OutDir])
 
         with self.output().open('w') as go_logs_inf:
             go_logs_inf.write(tmp)
@@ -69,27 +70,30 @@ class run_go(luigi.Task):
     def output(self):
         return luigi.LocalTarget('{}/logs/go.log'.format(OutDir))
 
+
 class run_kegg(luigi.Task):
     '''
     run kegg enrichment analysis
     '''
 
+    OutDir = luigi.Parameter()
+
     def requires(self):
-        return run_go()
+        return prepare(OutDir=OutDir)
 
     def run(self):
         tmp = run_cmd(['python',
-        KEGG_ANALYSIS_PYTHON,
-        '--blast_out',
-        KEGGBlast,
-        '--species',
-        KEGGAbbr,
-        '--background',
-        KEGGBackground,
-        '--diff_dir',
-        '{}/differential_analysis/'.format(QuantDir),
-        '--out_dir',
-        '{}/kegg'.format(OutDir)])
+                       KEGG_ANALYSIS_PYTHON,
+                       '--blast_out',
+                       KEGGBlast,
+                       '--species',
+                       KEGGAbbr,
+                       '--background',
+                       KEGGBackground,
+                       '--diff_dir',
+                       '{}/differential_analysis/'.format(QuantDir),
+                       '--out_dir',
+                       '{}/kegg'.format(OutDir)])
 
         with self.output().open('w') as kegg_log_inf:
             kegg_log_inf.write(tmp)
@@ -97,29 +101,32 @@ class run_kegg(luigi.Task):
     def output(self):
         return luigi.LocalTarget('{}/logs/kegg.log'.format(OutDir))
 
+
 class run_go_barplot(luigi.Task):
     '''
     go enrichment barplot
     '''
 
     compare = luigi.Parameter()
+    OutDir = luigi.Parameter()
 
     def requires(self):
-        return run_kegg()
+        return run_go(OutDir=OutDir)
 
     def run(self):
         tmp = run_cmd(['Rscript',
-        ENRICH_BARPLOT_R,
-        '--anno',
-        GoseqAnno,
-        '--table',
-        '{0}/go/{1}'.format(OutDir, self.compare),
-        '--diff',
-        '{0}/differential_analysis/{1}'.format(QuantDir, self.compare),
-        '--type',
-        'go',
-        '--out',
-        '{0}/go/{1}'.format(OutDir, self.compare)])
+                       ENRICH_BARPLOT_R,
+                       '--anno',
+                       GoseqAnno,
+                       '--table',
+                       '{0}/go/{1}'.format(OutDir, self.compare),
+                       '--diff',
+                       '{0}/differential_analysis/{1}'.format(
+                           QuantDir, self.compare),
+                       '--type',
+                       'go',
+                       '--out',
+                       '{0}/go/{1}'.format(OutDir, self.compare)])
 
         with self.output().open('w') as go_plot_logs:
             go_plot_logs.write(tmp)
@@ -127,35 +134,39 @@ class run_go_barplot(luigi.Task):
     def output(self):
         return luigi.LocalTarget('{}/logs/go_barplot.log'.format(OutDir))
 
+
 class run_kegg_barplot(luigi.Task):
     '''
     kegg enrichment barplot
     '''
 
     compare = luigi.Parameter()
+    OutDir = luigi.Parameter()
 
     def requires(self):
-        return [run_go_barplot(compare = each_compare) for each_compare in compare_list]
+        return [run_kegg(OutDir=OutDir) for each_compare in compare_list]
 
     def run(self):
         tmp = run_cmd(['Rscript',
-        ENRICH_BARPLOT_R,
-        '--anno',
-        KEGGBlast,
-        '--table',
-        '{0}/kegg/{1}'.format(OutDir, self.compare),
-        '--diff',
-        '{0}/differential_analysis/{1}'.format(QuantDir, self.compare),
-        '--type',
-        'kegg',
-        '--out',
-        '{0}/kegg/{1}'.format(OutDir, self.compare)])
+                       ENRICH_BARPLOT_R,
+                       '--anno',
+                       KEGGBlast,
+                       '--table',
+                       '{0}/kegg/{1}'.format(OutDir, self.compare),
+                       '--diff',
+                       '{0}/differential_analysis/{1}'.format(
+                           QuantDir, self.compare),
+                       '--type',
+                       'kegg',
+                       '--out',
+                       '{0}/kegg/{1}'.format(OutDir, self.compare)])
 
         with self.output().open('w') as kegg_plog_logs:
             kegg_plog_logs.write(tmp)
 
     def output(self):
         return luigi.LocalTarget('{}/logs/kegg_barplot.log'.format(OutDir))
+
 
 class enrichment_collection(luigi.Task):
 
@@ -165,9 +176,9 @@ class enrichment_collection(luigi.Task):
     TopgoAnno = luigi.Parameter()
     GeneLen = luigi.Parameter()
     KEGGAbbr = luigi.Parameter()
-    KEGGBackground = luigi.Parameter(default = "")
+    KEGGBackground = luigi.Parameter(default="")
     KEGGBlast = luigi.Parameter()
-    ReRun = luigi.Parameter()
+    ReRun = luigi.Parameter(default="")
     # UpstreamTask = luigi.Parameter(default=No_task)
 
     def requires(self):
@@ -186,16 +197,18 @@ class enrichment_collection(luigi.Task):
         # UpstreamTask = self.UpstreamTask
         diff_dir = path.join(QuantDir, 'differential_analysis')
         compare_list = listdir(diff_dir)
-        return [run_kegg_barplot(compare = each_compare) for each_compare in compare_list]
+        return [(run_kegg_barplot(compare=each_compare, OutDir=OutDir), run_go_barplot(compare=each_compare, OutDir=OutDir)) for each_compare in compare_list]
 
     def run(self):
-        ignore_files = ['.ignore', 'logs', 'kegg/blast_out', 'kegg/kegg_pathway_logs', 'txt.files']
+        ignore_files = ['.ignore', 'logs', 'kegg/blast_out',
+                        'kegg/kegg_pathway_logs', 'txt.files']
         with self.output().open('w') as ignore_inf:
             for each_file in ignore_files:
                 ignore_inf.write('{}\n'.format(each_file))
 
     def output(self):
         return luigi.LocalTarget('{}/.ignore'.format(self.OutDir))
+
 
 if __name__ == '__main__':
     luigi.run()

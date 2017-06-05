@@ -20,9 +20,11 @@ class prepare(luigi.Task):
     prepare directory
     '''
 
+    OutDir = luigi.Parameter()
+
     def run(self):
-        log_dir = path.join(OutDir, 'logs')
-        bam_process = path.join(OutDir, 'bam')
+        log_dir = path.join(self.OutDir, 'logs')
+        bam_process = path.join(self.OutDir, 'bam')
 
         tmp = run_cmd(['mkdir',
                        '-p',
@@ -33,7 +35,7 @@ class prepare(luigi.Task):
             prepare_log.write(tmp)
 
     def output(self):
-        return luigi.LocalTarget('{}/logs/prepare.log'.format(OutDir))
+        return luigi.LocalTarget('{}/logs/prepare.log'.format(self.OutDir))
 
 
 class add_read_groups(luigi.Task):
@@ -42,9 +44,10 @@ class add_read_groups(luigi.Task):
     '''
 
     sample = luigi.Parameter()
+    OutDir = luigi.Parameter()
 
     def requires(self):
-        return prepare()
+        return prepare(OutDir = OutDir)
 
     def run(self):
         each_sample_dir = path.join(OutDir, 'bam', self.sample)
@@ -79,9 +82,10 @@ class mark_duplicates(luigi.Task):
     '''
 
     sample = luigi.Parameter()
+    OutDir = luigi.Parameter()
 
     def requires(self):
-        return [add_read_groups(sample=each_sample) for each_sample in sample_list]
+        return [add_read_groups(sample=each_sample, OutDir=OutDir) for each_sample in sample_list]
 
     def run(self):
         mark_dup_cmd = ['java',
@@ -121,9 +125,10 @@ class split_ncigar_reads(luigi.Task):
     '''
 
     sample = luigi.Parameter()
+    OutDir = luigi.Parameter()
 
     def requires(self):
-        return [mark_duplicates(sample=each_sample) for each_sample in sample_list]
+        return [mark_duplicates(sample=each_sample, OutDir=OutDir) for each_sample in sample_list]
 
     def run(self):
         split_ncigar_cmd = ['java',
@@ -170,8 +175,10 @@ class snp_calling(luigi.Task):
     call snp using GATK
     '''
 
+    OutDir = luigi.Parameter()
+
     def requires(self):
-        return [split_ncigar_reads(sample=each_sample) for each_sample in sample_list]
+        return [split_ncigar_reads(sample=each_sample, OutDir=OutDir) for each_sample in sample_list]
 
     def run(self):
         bam_list_file = '{}/bam/bam.list'.format(OutDir)
@@ -211,8 +218,10 @@ class snp_filter(luigi.Task):
     filter snp output
     '''
 
+    OutDir = luigi.Parameter()
+
     def requires(self):
-        return snp_calling()
+        return snp_calling(OutDir=OutDir)
 
     def run(self):
         tmp = run_cmd(['java',
@@ -248,9 +257,11 @@ class snp_filter(luigi.Task):
 
 class snp_summary(luigi.Task):
 
+    OutDir = luigi.Parameter()
+
     def requires(self):
 
-        return snp_filter()
+        return snp_filter(OutDir=OutDir)
 
     def run(self):
 
@@ -302,7 +313,7 @@ class snp_collection(luigi.Task):
         sample_list = [each.strip().split()[1]
                        for each in open(self.SampleInf)]
 
-        return snp_summary()
+        return snp_summary(OutDir=OutDir)
 
     def run(self):
 

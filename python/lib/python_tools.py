@@ -1,12 +1,7 @@
 import sys
 import os
-from os.path import join as jp
-from os.path import basename
-from os.path import dirname
 from time import localtime, strftime
-from collections import defaultdict
 from Bio import SeqIO
-from Bio.Seq import Seq
 import json
 import shutil
 
@@ -14,6 +9,8 @@ import shutil
 Some functions for common needs
 
 '''
+
+
 def parse_fasta(f):
     retval = {}
     for record in SeqIO.parse(f, 'fasta'):
@@ -23,8 +20,8 @@ def parse_fasta(f):
 
 def write_str_to_file(string, fn, append=False):
     dirname = os.path.dirname(fn)
-    if not os.path.isdir (dirname):
-        circ_mkdir_unix (dirname)
+    if not os.path.isdir(dirname):
+        circ_mkdir_unix(dirname)
     fh = open(fn, 'a' if append is True else 'w')
     fh.write(string)
     fh.close()
@@ -94,7 +91,7 @@ def circ_run_script(script, file_type, allow_error=False, msg=None):
     if file_type == 'sh':
         cmd = 'sh %s' % script
     elif file_type == 'R':
-        cmd = '%s --vanilla %s' % (var.prog_Rscript, script)
+        cmd = 'Rscript --vanilla %s' % script
     elif file_type == 'python':
         cmd = 'python %s' % script
     else:
@@ -110,6 +107,7 @@ def circ_mkdir_unix(path):
     cmd = 'mkdir -p %s' % path
     if not os.path.isdir(path):
         circ_call_process(cmd)
+
 
 def circ_mkdir(path):
     # cmd = 'mkdir -p %s' % path
@@ -127,17 +125,17 @@ def circ_safe_ln(path1, path2):
     circ_call_process(cmd)
 
 
-
-def table_to_dict(fn,key_row = 1,val_row = 2,header = True,sep='\t'):
+def table_to_dict(fn, key_row=1, val_row=2, header=True, sep='\t'):
     fn_dict = {}
-    with open(fn,'r') as fn_info :
-        for n,eachline in enumerate(fn_info) :
+    with open(fn, 'r') as fn_info:
+        for n, eachline in enumerate(fn_info):
             each_info = eachline.strip().split(sep)
             if n == 0 and header:
                 continue
-            else :
-                fn_dict[each_info[key_row-1]] = each_info[val_row-1]
+            else:
+                fn_dict[each_info[key_row - 1]] = each_info[val_row - 1]
     return fn_dict
+
 
 def Median(a):
     a = sorted(a)
@@ -145,26 +143,29 @@ def Median(a):
     l2 = l / 2
     return a[l2] if l % 2 else (a[l2] + a[l2 - 1]) / 2.0
 
-def add_dict_value(mydict,mykey,myvalue):
-    if mykey not in mydict :
+
+def add_dict_value(mydict, mykey, myvalue):
+    if mykey not in mydict:
         mydict[mykey] = [myvalue]
-    elif myvalue not in mydict[mykey] :
+    elif myvalue not in mydict[mykey]:
         mydict[mykey].append(myvalue)
-    else :
+    else:
         pass
 
-def invert_dict(d):  
-    return dict((v,k) for k,v in d.iteritems()) 
 
-def multi_process_shell_script(sh_list,fn,multi_num = 12) :
-    with open(fn,'w') as fn_info :
+def invert_dict(d):
+    return dict((v, k) for k, v in d.iteritems())
+
+
+def multi_process_shell_script(sh_list, fn, multi_num=12):
+    with open(fn, 'w') as fn_info:
         fn_info.write('#! /bin/bash\n')
         fn_info.write('echo "####Process begins####"\n')
         fn_info.write('date\n')
-        for n,each in enumerate(sh_list) :
-            if (n+1) % multi_num == 0 :
+        for n, each in enumerate(sh_list):
+            if (n + 1) % multi_num == 0:
                 fn_info.write('wait\n')
-            else :
+            else:
                 fn_info.write('sh %s &\n' % each)
         fn_info.write('date\n')
         fn_info.write('echo "####Process ends####"')
@@ -172,24 +173,28 @@ def multi_process_shell_script(sh_list,fn,multi_num = 12) :
 
 def file_to_list(fn):
     outlist = []
-    with open(fn,'r') as fn_info :
-        for eachline in fn_info :
+    with open(fn, 'r') as fn_info:
+        for eachline in fn_info:
             eachline = eachline.strip()
             outlist.append(eachline)
     return outlist
 
-def th_launch_job_cmd(script) :
+
+def th_launch_job_cmd(script):
     cmd = 'yhrun -n 1 -N 1 -c 24 -x cn[9531] -p work %s &' % script
     return cmd
 
-def write_obj_to_json(obj,fn):
-    with open(fn,'w') as fn_info :
-        json.dump(obj,fn_info)
 
-def load_fn_to_obj(fn) :    
-    with open(fn) as fn_info :
+def write_obj_to_json(obj, fn):
+    with open(fn, 'w') as fn_info:
+        json.dump(obj, fn_info)
+
+
+def load_fn_to_obj(fn):
+    with open(fn) as fn_info:
         obj = json.load(fn_info)
     return obj
+
 
 def merge_files(filenames, output_file):
     outfh = open(output_file, "w")
@@ -197,8 +202,10 @@ def merge_files(filenames, output_file):
         shutil.copyfileobj(open(filename), outfh)
     outfh.close()
 
+
 def main():
     pass
 
-if __name__ == '__main__' :
+
+if __name__ == '__main__':
     main()

@@ -9,6 +9,7 @@ sys.path.insert(0, RNAseq_lib_path)
 from RNAseq_lib import run_cmd
 from RNAseq_lib import STAR_MAPPING_STATS
 from RNAseq_lib import STAR_MAPPING_STATS_PLOT
+from python_tools import write_obj_to_json
 
 STAR_THREAD = 8
 
@@ -17,6 +18,7 @@ class prepare(luigi.Task):
     '''
     prepare directory and others
     '''
+    OutDir = luigi.Parameter()
 
     def run(self):
         log_dir = path.join(OutDir, 'logs')
@@ -39,9 +41,10 @@ class run_star(luigi.Task):
     run mapping
     '''
     sample = luigi.Parameter()
+    OutDir = luigi.Parameter()
 
     def requires(self):
-        return prepare()
+        return prepare(OutDir=OutDir)
 
     def run(self):
         each_sample_mapping_dir = path.join(OutDir, 'mapping_dir', self.sample)
@@ -83,9 +86,10 @@ class get_bam_file(luigi.Task):
     '''
 
     sample = luigi.Parameter()
+    OutDir = luigi.Parameter()
 
     def requires(self):
-        return [run_star(sample=each_sample) for each_sample in sample_list]
+        return [run_star(sample=each_sample, OutDir=OutDir) for each_sample in sample_list]
 
     def run(self):
         link_cmd = ['ln',
@@ -110,8 +114,10 @@ class get_bam_file(luigi.Task):
 
 class star_mapping_summary(luigi.Task):
 
+    OutDir = luigi.Parameter()
+
     def requires(self):
-        return [get_bam_file(sample=each_sample) for each_sample in sample_list]
+        return [get_bam_file(sample=each_sample, OutDir=OutDir) for each_sample in sample_list]
 
     def run(self):
 
@@ -154,12 +160,14 @@ class star_mapping_collection(luigi.Task):
         CleanDir = self.CleanDir
         IndexDir = self.IndexDir
         sample_list = [each.strip().split()[1] for each in open(SampleInf)]
-        return star_mapping_summary()
+        return star_mapping_summary(OutDir=OutDir)
 
     def run(self):
         ignore_files = ['.ignore', 'logs', 'mapping_dir',
-                        'bam_dir', 'mapping_stats.plot', 'Rplots.pdf']
-
+                        'bam_dir', 'mapping_stats.plot', 'Rplots.pdf', 'mapping_stats.report']
+        pdf_report_files = ['mapping_stats_plot.png', 'mapping_stats.report']
+        pdf_report_ini = path.join(self.OutDir, '.pdf_files')
+        write_obj_to_json(pdf_report_files, pdf_report_ini)
         with self.output().open('w') as ignore_files_inf:
             for each_file in ignore_files:
                 ignore_files_inf.write('{}\n'.format(each_file))

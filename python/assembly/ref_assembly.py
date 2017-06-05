@@ -1,7 +1,5 @@
-import subprocess
 import luigi
 from os import path
-from os import system
 import sys
 from glob import glob
 from kobas import config
@@ -12,7 +10,7 @@ sys.path.insert(0, RNAseq_lib_path)
 from RNAseq_lib import run_cmd
 from python_tools import circ_mkdir_unix
 from python_tools import write_obj_to_file
-from RNAseq_lib import SWISSPROT_FASTA
+# from RNAseq_lib import SWISSPROT_FASTA
 
 BLAST_THREAD = '2'
 STRINGTIE_THREAD = '2'
@@ -29,13 +27,13 @@ class prepare(luigi.Task):
         annotation_dir = path.join(OutDir, 'annotation')
 
         tmp = run_cmd(['mkdir',
-                        '-p',
-                        log_dir,
-                        assembly_dir,
-                        annotation_dir])
+                       '-p',
+                       log_dir,
+                       assembly_dir,
+                       annotation_dir])
 
         with self.output().open('w') as prepare_logs:
-            prepare_logs.write('prepare finished')
+            prepare_logs.write(tmp)
 
     def output(self):
         return luigi.LocalTarget('{}/logs/prepare.log'.format(OutDir))
@@ -51,11 +49,11 @@ class stringtie_assembly(luigi.Task):
     def run(self):
 
         stringtie_cmd = ['stringtie',
-        '{0}/{1}.bam'.format(BamDir, self.sample),
-        '-p',
-        STRINGTIE_THREAD,
-        '-o',
-        '{0}/assembly_dir/{1}.gtf'.format(OutDir, self.sample)]
+                         '{0}/{1}.bam'.format(BamDir, self.sample),
+                         '-p',
+                         STRINGTIE_THREAD,
+                         '-o',
+                         '{0}/assembly_dir/{1}.gtf'.format(OutDir, self.sample)]
 
         if RefGtf:
             stringtie_cmd.extend(['-G', RefGtf])
@@ -72,44 +70,37 @@ class stringtie_assembly(luigi.Task):
 class stringtie_merge(luigi.Task):
 
     def requires(self):
-        return [stringtie_assembly(sample = each_sample) for each_sample in sample_list]
+        return [stringtie_assembly(sample=each_sample) for each_sample in sample_list]
 
     def run(self):
         gtf_list_file = path.join(OutDir, 'assembly_dir', 'gtf.list')
-        gtf_path_list = [path.join(OutDir, 'assembly_dir', '{}.gtf'.format(each_sample)) for each_sample in sample_list]
+        gtf_path_list = [path.join(OutDir, 'assembly_dir', '{}.gtf'.format(
+            each_sample)) for each_sample in sample_list]
         write_obj_to_file(gtf_path_list, gtf_list_file)
 
         merge_gtf_cmd = ['stringtie',
-        '--merge',
-        '-m',
-        '200',
-        '-T',
-        '0.1',
-        '-f',
-        '0.1',
-        '-o',
-        '{}/stringtie_merge.gtf'.format(OutDir),
-        gtf_list_file]
+                         '--merge',
+                         '-m',
+                         '200',
+                         '-T',
+                         '0.1',
+                         '-f',
+                         '0.1',
+                         '-o',
+                         '{}/stringtie_merge.gtf'.format(OutDir),
+                         gtf_list_file]
+        if RefGtf:
+            merge_gtf_cmd.extend(['-G', RefGtf])
 
         get_fa_cmd = ['gffread',
-        '{}/stringtie_merge.gtf'.format(OutDir),
-        '-g',
-        RefFa,
-        '-w',
-        '{}/stringtie_merge.fa'.format(OutDir)]
+                      '{}/stringtie_merge.gtf'.format(OutDir),
+                      '-g',
+                      RefFa,
+                      '-w',
+                      '{}/stringtie_merge.fa'.format(OutDir)]
 
-        orf_pred_cmd = ['TransDecoder.LongOrfs',
-        '-t',
-        '{}/stringtie_merge.fa'.format(OutDir),
-        '--gene_trans_map',
-        SampleInf]
-
-        link_orf_cmd = ['ln',
-        '-s',
-        '{}/stringtie_merge.fa.transdecoder_dir/longest_orfs.pep'.format(OutDir),
-        '{}/annotation']
-
-        stringtie_merge_log_inf = run_cmd([merge_gtf_cmd, get_fa_cmd, orf_pred_cmd, link_orf_cmd])
+        stringtie_merge_log_inf = run_cmd(
+            [merge_gtf_cmd, get_fa_cmd])
 
         with self.output().open('w') as stringtie_merge_log:
             stringtie_merge_log.write(stringtie_merge_log_inf)
@@ -131,21 +122,32 @@ class blast_annotate(luigi.Task):
     def run(self):
         fasta_file_name = path.basename(self.fasta_file)
 
+        # orf_pred_cmd = ['TransDecoder.LongOrfs',
+        #                 '-t',
+        #                 '{}/stringtie_merge.fa'.format(OutDir),
+        #                 '--gene_trans_map',
+        #                 SampleInf]
+        # link_orf_cmd = ['ln',
+        #                 '-s',
+        #                 '{}/stringtie_merge.fa.transdecoder_dir/longest_orfs.pep'.format(
+        #                     OutDir),
+        #                 '{}/annotation']
+
         blast_cmd = ['blastp',
-        '-query',
-        self.fasta_file,
-        '-db',
-        self.database,
-        '-evalue',
-        '1e-5',
-        '-outfmt',
-        '6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore stitle',
-        '-max_target_seqs',
-        '1',
-        '-num_threads',
-        BLAST_THREAD,
-        '-out',
-        '{0}/{1}.blasttab'.format(self.blast_out_dir, fasta_file_name)]
+                     '-query',
+                     self.fasta_file,
+                     '-db',
+                     self.database,
+                     '-evalue',
+                     '1e-5',
+                     '-outfmt',
+                     '6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore stitle',
+                     '-max_target_seqs',
+                     '1',
+                     '-num_threads',
+                     BLAST_THREAD,
+                     '-out',
+                     '{0}/{1}.blasttab'.format(self.blast_out_dir, fasta_file_name)]
 
         blast_log_inf = run_cmd(blast_cmd)
 
@@ -160,46 +162,47 @@ class blast_annotate(luigi.Task):
 class ref_assembly_collection(luigi.Task):
 
     SampleInf = luigi.Parameter()
-    RefGtf = luigi.Parameter(default = '')
-    RefFa = luigi.Parameter(default = '')
-    BamDir = luigi.Parameter(default = '')
-    FqDir = luigi.Parameter(default = '')
+    BamDir = luigi.Parameter()
     OutDir = luigi.Parameter()
-    SplitDir = luigi.Parameter()
-    KEGGAbbr = luigi.Parameter()
+    RefGtf = luigi.Parameter(default='')
+    RefFa = luigi.Parameter()
+    # KEGGAbbr = luigi.Parameter(default='')
 
     def requires(self):
-        global SampleInf, BamDir, sample_list, RefGtf, RefFa, FqDir, OutDir, SplitDir, KEGGAbbr
+        global SampleInf, BamDir, sample_list, RefGtf, RefFa, OutDir
         SampleInf = self.SampleInf
         BamDir = self.BamDir
-        sample_list = [each.strip().split()[1] for each in open(self.SampleInf)]
+        sample_list = [each.strip().split()[1]
+                       for each in open(self.SampleInf)]
         RefGtf = self.RefGtf
         RefFa = self.RefFa
-        FqDir = self.FqDir
         OutDir = path.abspath(self.OutDir)
-        SplitDir = self.SplitDir
-        KEGGAbbr = self.KEGGAbbr
+        # KEGG blast
+        # KEGGAbbr = self.KEGGAbbr
+        # kobasrc = config.getrc()
+        # ko_pep_dir = kobasrc['blastdb']
+        # ko_pep = path.join(ko_pep_dir, '{}.pep.fasta'.format(KEGGAbbr))
+        # ko_out_dir = path.join(OutDir, 'kegg')
+        # circ_mkdir_unix(ko_out_dir)
+        # return [blast_annotate(database_name='kegg', database=ko_pep,
+        # fasta_file=each_fa, blast_out_dir=ko_out_dir) for each_fa in
+        # split_fastas]
+        return stringtie_merge()
 
-        split_fastas = glob('{}/*fa'.format(SplitDir))
+        # SWISS-PROT blast
+        # swissprot_out_dir = path.join(OutDir, 'swissprot')
+        # circ_mkdir_unix(swissprot_out_dir)
 
-        ## KEGG blast
-        kobasrc = config.getrc()
-        ko_pep_dir = kobasrc['blastdb']
-        ko_pep = path.join(ko_pep_dir, '{}.pep.fasta'.format(KEGGAbbr))
-        ko_out_dir = path.join(OutDir, 'kegg')
-        circ_mkdir_unix(ko_out_dir)
-        return [blast_annotate(database_name = 'kegg', database = ko_pep, fasta_file = each_fa, blast_out_dir = ko_out_dir) for each_fa in split_fastas]
-
-        ## SWISS-PROT blast
-        swissprot_out_dir = path.join(OutDir, 'swissprot')
-        circ_mkdir_unix(swissprot_out_dir)
-        #return [blast_annotate(database_name = 'swissprot', database = SWISSPROT_FASTA, fasta_file = each_fa, blast_out_dir = swissprot_out_dir) for each_fa in split_fastas]
+        # return [blast_annotate(database_name = 'swissprot', database =
+        # SWISSPROT_FASTA, fasta_file = each_fa, blast_out_dir =
+        # swissprot_out_dir) for each_fa in split_fastas]
 
     def run(self):
         pass
 
     def output(self):
         pass
+
 
 if __name__ == '__main__':
     luigi.run()

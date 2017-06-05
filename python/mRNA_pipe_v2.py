@@ -7,6 +7,7 @@ from os import path
 import sys
 from RNAseq_lib import run_cmd
 from python_tools import circ_mkdir_unix
+from python_tools import load_fn_to_obj
 
 script_path = path.dirname(path.abspath(__file__))
 fastqc_dir = path.join(script_path, 'fastqc')
@@ -32,6 +33,7 @@ import star_mapping_pipe_v2
 import rseqc_pipe
 import snp_pipe
 import rmats_pipe
+
 
 class cp_analysis_result(luigi.Task):
 
@@ -125,40 +127,6 @@ class rseqc(luigi.Task):
         return luigi.LocalTarget('{}/rseqc.log'.format(log_dir))
 
 
-class release_analysis_data(luigi.Task):
-
-    def requires(self):
-
-        return mapping()
-
-    def run(self):
-
-        analysis_bam_dir = path.join(mapping_dir, 'bam_dir')
-        out_data_dir = path.join(proj_dir, 'analysis_data')
-        out_bam_dir = path.join(out_data_dir, 'bam')
-        fq_dir = path.join(out_data_dir, 'fq')
-
-        circ_mkdir_unix(out_data_dir)
-
-        ln_fq_cmd = ['ln',
-                     '-s',
-                     clean_dir,
-                     fq_dir]
-
-        ln_bam_cmd = ['ln',
-                      '-s',
-                      analysis_bam_dir,
-                      out_bam_dir]
-
-        link_cmd_inf = run_cmd([ln_fq_cmd, ln_bam_cmd])
-
-        with self.output().open('w') as get_analysis_data_log:
-            get_analysis_data_log.write(link_cmd_inf)
-
-    def output(self):
-        return luigi.LocalTarget('{}/release_analysis_data.log'.format(log_dir))
-
-
 class snp(luigi.Task):
 
     def requires(self):
@@ -191,6 +159,67 @@ class splicing(luigi.Task):
         return luigi.LocalTarget('{}/splicing.log'.format(log_dir))
 
 
+class release_analysis_data(luigi.Task):
+
+    def requires(self):
+
+        return mapping()
+
+    def run(self):
+
+        analysis_bam_dir = path.join(mapping_dir, 'bam_dir')
+        out_data_dir = path.join(proj_dir, '{}_analysis_data'.format(proj_name))
+        out_bam_dir = path.join(out_data_dir, 'bam')
+        fq_dir = path.join(out_data_dir, 'fq')
+
+        circ_mkdir_unix(out_data_dir)
+
+        ln_fq_cmd = ['ln',
+                     '-s',
+                     clean_dir,
+                     fq_dir]
+
+        ln_bam_cmd = ['ln',
+                      '-s',
+                      analysis_bam_dir,
+                      out_bam_dir]
+
+        link_cmd_inf = run_cmd([ln_fq_cmd, ln_bam_cmd])
+
+        with self.output().open('w') as get_analysis_data_log:
+            get_analysis_data_log.write(link_cmd_inf)
+
+    def output(self):
+        return luigi.LocalTarget('{}/release_analysis_data.log'.format(log_dir))
+
+
+class pdf_report_data(luigi.Task):
+
+    from_dir = luigi.Parameter()
+    to_dir = luigi.Parameter()
+
+    def run(self):
+        from_dir_name = path.basename(self.from_dir)
+        to_dir = path.join(self.to_dir, from_dir_name)
+        report_files_ini = path.join(self.from_dir, '.pdf_files')
+        if not path.exists(report_files_ini):
+            cp_cmd_inf = 'nothing for report in {}'.format(from_dir_name)
+        else:
+            circ_mkdir_unix(to_dir)
+            report_files_list = load_fn_to_obj(report_files_ini)
+            cp_cmd_list = []
+            for each_file in report_files_list:
+                each_file_path = path.join(self.from_dir, each_file)
+                cp_cmd_list.append(['cp', each_file_path, to_dir])
+            cp_cmd_inf = run_cmd(cp_cmd_list)
+        with self.output().open('w') as cp_cmd_log:
+            cp_cmd_log.write(cp_cmd_inf)
+
+    def output(self):
+        from_dir_name = path.basename(self.from_dir)
+        return luigi.LocalTarget('{0}/{1}_report_data_cp.log'.format(log_dir, from_dir_name))
+
+
 class run_pipe(luigi.Task):
 
     # read parameter
@@ -214,14 +243,17 @@ class run_pipe(luigi.Task):
     def requires(self):
 
         ## global paramters
-        global proj_name, proj_dir, log_dir, clean_dir, sample_inf, result_dir
+        global proj_name, proj_dir, log_dir, clean_dir, sample_inf, result_dir, report_dir
         proj_name = self.proj_name
         proj_dir = self.proj_dir
         clean_dir = self.clean_dir
         sample_inf = self.sample_inf
         log_dir = path.join(proj_dir, 'logs')
-        result_dir = path.join(proj_dir, '{}_analysis'.format(proj_name))
-        map(circ_mkdir_unix, [log_dir, result_dir])
+        result_dir = path.join(proj_dir, '{}_analysis'.format(
+            proj_name), 'analysis_result')
+        report_dir = path.join(proj_dir, '{}_analysis'.format(
+            proj_name), 'analysis_report')
+        map(circ_mkdir_unix, [log_dir, result_dir, report_dir])
 
         # fastqc module
         global fastqc_dir
@@ -257,7 +289,7 @@ class run_pipe(luigi.Task):
         snp_dir = path.join(proj_dir, 'snp')
         genome_fa = self.genome_fa
 
-        ## splicing module
+        # splicing module
         global gtf
         gtf = self.gtf
 
@@ -275,6 +307,8 @@ class run_pipe(luigi.Task):
 
     def run(self):
         yield [cp_analysis_result(each_folder, result_dir) for each_folder in analysis_folders]
+        pdf_report_data_dir = path.join(report_dir, 'pdf_data')
+        yield [pdf_report_data(each_folder, pdf_report_data_dir) for each_folder in analysis_folders]
         with self.output().open('w') as analysis_log:
             analysis_log.write('analysis finished')
 
