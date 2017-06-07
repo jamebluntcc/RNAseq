@@ -185,7 +185,8 @@ om_volcano_plot <- function(diff_table, compare_name, logfc, qvalue, outdir) {
 
   y_line_pos = round(-log10(qvalue),1)
 
-  dpa_results <- diff_table[,c("logFC","FDR")]
+  # dpa_results <- diff_table[,c("logFC","FDR")]
+  dpa_results <- diff_table
   dpa_results$logFDR <- -log10(dpa_results$FDR)
   dpa_results$color <- "blue"
   up_name = unlist(strsplit(compare_name,split = "_vs_"))[1]
@@ -241,20 +242,45 @@ om_volcano_plot <- function(diff_table, compare_name, logfc, qvalue, outdir) {
                                  legend.direction = "vertical"
                                  ))
 
+
+  compare_number = 0
   p <- ggplot(dpa_results2,aes(logFC,logFDR,colour = color))+geom_point(size = .6)+
-    guides(color = guide_legend(title = "")) +
-    scale_color_manual(values = c("red"=red,"green"=green,"blue"=blue),
-                       breaks = c("green", "red"),
-                       labels = c(green_label, red_label))+
     geom_hline(yintercept = y_line_pos,lty = 4,size = .45)+
     geom_vline(xintercept = -(logfc),lty = 4,size = .45)+
     geom_vline(xintercept = logfc,lty = 4,size = .45)+
-    xlab("logFC")+ylab("-log10(FDR)")+ggtitle(compare_name)+
-    scale_y_continuous(breaks = c(0,1.3,3,10,20,30),limits = c(0,logFDR_limit))+
-    scale_x_continuous(breaks = c(-8,-4,-2,-1,0,1,2,4,8),limits = c(-logFC_limit,logFC_limit))
+    xlab("logFC")+ylab("-log10(FDR)")
 
-  ggsave(filename=paste(outdir,"/",compare_name,".Volcano_plot.pdf",sep=""),plot=p,width = 6,height = 8)
-  ggsave(filename=paste(outdir,"/",compare_name,".Volcano_plot.png",sep=""),type="cairo-png",plot=p,width = 6,height = 8)
+  if ('compare' %in% colnames(dpa_results2)) {
+    compare_number <- length(unique(dpa_results2$compare))
+    facet_wrap_ncol = round(sqrt(compare_number))
+    p <- p + guides(color = F) +
+       scale_color_manual(values = c("red"=red,"green"=green,"blue"=blue))+
+       facet_wrap(~compare, ncol = facet_wrap_ncol)
+  } else {
+    p <- p + guides(color = guide_legend(title = "")) +
+      scale_color_manual(values = c("red"=red,"green"=green,"blue"=blue),
+                       breaks = c("green", "red"),
+                       labels = c(green_label, red_label))+
+      ggtitle(compare_name)+
+      scale_y_continuous(breaks = c(0,1.3,3,10,20,30),limits = c(0,logFDR_limit))+
+      scale_x_continuous(breaks = c(-8,-4,-2,-1,0,1,2,4,8),limits = c(-logFC_limit,logFC_limit))
+
+  }
+  # p <- ggplot(dpa_results2,aes(logFC,logFDR,colour = color))+geom_point(size = .6)+
+  #   guides(color = guide_legend(title = "")) +
+  #   scale_color_manual(values = c("red"=red,"green"=green,"blue"=blue),
+  #                      breaks = c("green", "red"),
+  #                      labels = c(green_label, red_label))+
+  #   geom_hline(yintercept = y_line_pos,lty = 4,size = .45)+
+  #   geom_vline(xintercept = -(logfc),lty = 4,size = .45)+
+  #   geom_vline(xintercept = logfc,lty = 4,size = .45)+
+  #   xlab("logFC")+ylab("-log10(FDR)")+ggtitle(compare_name)+
+  #   scale_y_continuous(breaks = c(0,1.3,3,10,20,30),limits = c(0,logFDR_limit))+
+  #   scale_x_continuous(breaks = c(-8,-4,-2,-1,0,1,2,4,8),limits = c(-logFC_limit,logFC_limit))
+  plot_height <- 8 + compare_number/4
+  plot_width <- 6 + compare_number/4
+  ggsave(filename=paste(outdir,"/",compare_name,".Volcano_plot.pdf",sep=""),plot=p,width = plot_width,height = plot_height)
+  ggsave(filename=paste(outdir,"/",compare_name,".Volcano_plot.png",sep=""),type="cairo-png",plot=p,width = plot_width,height = plot_height)
 
 }
 

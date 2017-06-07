@@ -1,7 +1,5 @@
-import subprocess
 import luigi
 from os import path
-from os import system
 import sys
 from kobas import config
 
@@ -23,7 +21,9 @@ from python_tools import circ_mkdir_unix
 STAR_THREAD = '8'
 BLAST_THREAD = '8'
 
-## TODO
+# TODO
+
+
 class down_load_file(luigi.Task):
 
     def requires(self):
@@ -40,18 +40,18 @@ class fa_index(luigi.Task):
 
     def run(self):
         samtools_index_cmd = ['samtools',
-        'faidx',
-        ref_fa]
+                              'faidx',
+                              ref_fa]
 
         ref_fa_name = path.basename(ref_fa)
         ref_fa_prefix = path.splitext(ref_fa_name)[0]
 
         picard_index_cmd = ['java',
-        '-jar',
-        PICARD_PATH,
-        'CreateSequenceDictionary',
-        'R={}'.format(ref_fa),
-        'O={0}/{1}.dict'.format(genome_dir, ref_fa_prefix)]
+                            '-jar',
+                            PICARD_PATH,
+                            'CreateSequenceDictionary',
+                            'R={}'.format(ref_fa),
+                            'O={0}/{1}.dict'.format(genome_dir, ref_fa_prefix)]
 
         cmd_list = [samtools_index_cmd, picard_index_cmd]
         tmp = run_cmd(cmd_list)
@@ -62,6 +62,7 @@ class fa_index(luigi.Task):
     def output(self):
         return luigi.LocalTarget('{}/fa_index.log'.format(log_dir))
 
+
 class star_index(luigi.Task):
 
     def run(self):
@@ -69,18 +70,18 @@ class star_index(luigi.Task):
         circ_mkdir_unix(star_index_dir)
 
         star_index_cmd = ['STAR',
-        '--runThreadN',
-        STAR_THREAD,
-        '--runMode',
-        'genomeGenerate',
-        '--sjdbOverhang',
-        '149',
-        '--genomeFastaFiles',
-        ref_fa,
-        '--sjdbGTFfile',
-        ref_gtf,
-        '--genomeDir',
-        star_index_dir]
+                          '--runThreadN',
+                          STAR_THREAD,
+                          '--runMode',
+                          'genomeGenerate',
+                          '--sjdbOverhang',
+                          '149',
+                          '--genomeFastaFiles',
+                          ref_fa,
+                          '--sjdbGTFfile',
+                          ref_gtf,
+                          '--genomeDir',
+                          star_index_dir]
 
         star_index_log_inf = run_cmd(star_index_cmd)
 
@@ -95,13 +96,13 @@ class transcript_inf_table(luigi.Task):
 
     def run(self):
         transcript_feature_cmd = ['python',
-        TRANSCRIPT_FEATURE,
-        '--gtf',
-        ref_gtf,
-        '--species',
-        species_latin,
-        '--out_dir',
-        annotation_dir]
+                                  TRANSCRIPT_FEATURE,
+                                  '--gtf',
+                                  ref_gtf,
+                                  '--species',
+                                  species_latin,
+                                  '--out_dir',
+                                  annotation_dir]
 
         transcript_inf_table_log_inf = run_cmd(transcript_feature_cmd)
 
@@ -120,28 +121,34 @@ class go_annotation(luigi.Task):
     def run(self):
 
         download_biomart_go_cmd = ['Rscript',
-        BIOMART_DOWNLOAD,
-        '--gene_tr_file',
-        '{0}/{1}.gene_trans_map.txt'.format(annotation_dir, species_latin),
-        '--output',
-        '{0}/{1}'.format(annotation_dir, species_latin),
-        '--species',
-        '{}'.format(species_ensembl)]
+                                   BIOMART_DOWNLOAD,
+                                   '--gene_tr_file',
+                                   '{0}/{1}.gene_trans_map.txt'.format(
+                                       annotation_dir, species_latin),
+                                   '--output',
+                                   '{0}/{1}'.format(annotation_dir,
+                                                    species_latin),
+                                   '--species',
+                                   '{}'.format(species_ensembl)]
 
         get_topgo_go_cmd = ['python',
-        TOPGO_FORMAT,
-        '--biomart_go',
-        '{0}/{1}.go.txt'.format(annotation_dir, species_latin),
-        '--out_dir',
-        '{}'.format(annotation_dir)]
+                            TOPGO_FORMAT,
+                            '--biomart_go',
+                            '{0}/{1}.go.txt'.format(annotation_dir,
+                                                    species_latin),
+                            '--out_dir',
+                            '{}'.format(annotation_dir)]
 
         gene_go_anno_cmd = ['python',
-        GO_ANNO,
-        '{0}/{1}.go.txt'.format(annotation_dir, species_latin),
-        '{0}/{1}.go_detail.txt'.format(annotation_dir, species_latin),
-        '{0}/{1}.go_anno.txt'.format(annotation_dir, species_latin)]
+                            GO_ANNO,
+                            '{0}/{1}.go.txt'.format(annotation_dir,
+                                                    species_latin),
+                            '{0}/{1}.go_detail.txt'.format(
+                                annotation_dir, species_latin),
+                            '{0}/{1}.go_anno.txt'.format(annotation_dir, species_latin)]
 
-        go_cmd_list = [download_biomart_go_cmd, get_topgo_go_cmd, gene_go_anno_cmd]
+        go_cmd_list = [download_biomart_go_cmd,
+                       get_topgo_go_cmd, gene_go_anno_cmd]
         go_annotation_log_inf = run_cmd(go_cmd_list)
 
         with self.output().open('w') as go_annotation_log:
@@ -156,17 +163,18 @@ class tr_index(luigi.Task):
     def run(self):
 
         get_tr_fasta = ['gffread',
-        ref_gtf,
-        '-g',
-        ref_fa,
-        '-w',
-        '{0}/{1}.transcript.fa'.format(annotation_dir, species_latin)]
+                        ref_gtf,
+                        '-g',
+                        ref_fa,
+                        '-w',
+                        '{0}/{1}.transcript.fa'.format(annotation_dir, species_latin)]
 
         kallisto_index_cmd = ['kallisto',
-        'index',
-        '-i',
-        '{0}/{1}.transcript.fa.kallisto_idx'.format(annotation_dir, species_latin),
-        '{0}/{1}.transcript.fa'.format(annotation_dir, species_latin)]
+                              'index',
+                              '-i',
+                              '{0}/{1}.transcript.fa.kallisto_idx'.format(
+                                  annotation_dir, species_latin),
+                              '{0}/{1}.transcript.fa'.format(annotation_dir, species_latin)]
 
         tr_blast_cmd_list = [get_tr_fasta, kallisto_index_cmd]
         tr_blast_log_inf = run_cmd(tr_blast_cmd_list)
@@ -188,71 +196,78 @@ class ko_annotation(luigi.Task):
         kegg_cmd_list = []
         if not path.exists('{0}/{1}.pep.fasta'.format(ko_pep_dir, species_kegg)):
             down_load_seq_cmd = ['wget',
-            '-c',
-            'http://kobas.cbi.pku.edu.cn/download_file.php?type=seq_pep&filename={}.pep.fasta.gz'.format(species_kegg),
-            '-O',
-            '{0}/{1}.pep.fasta.gz'.format(ko_pep_dir, species_kegg)]
+                                 '-c',
+                                 'http://kobas.cbi.pku.edu.cn/download_file.php?type=seq_pep&filename={}.pep.fasta.gz'.format(
+                                     species_kegg),
+                                 '-O',
+                                 '{0}/{1}.pep.fasta.gz'.format(ko_pep_dir, species_kegg)]
 
             uncompress_seq_cmd = ['gunzip',
-            '{0}/{1}.pep.fasta.gz'.format(ko_pep_dir, species_kegg)]
+                                  '{0}/{1}.pep.fasta.gz'.format(ko_pep_dir, species_kegg)]
 
             mk_blast_db = ['makeblastdb',
-            '-in',
-            '{0}/{1}.pep.fasta'.format(ko_pep_dir, species_kegg),
-            '-dbtype',
-            'prot']
+                           '-in',
+                           '{0}/{1}.pep.fasta'.format(ko_pep_dir,
+                                                      species_kegg),
+                           '-dbtype',
+                           'prot']
 
             down_load_db_cmd = ['wget',
-            '-c',
-            'http://kobas.cbi.pku.edu.cn/download_file.php?type=sqlite3&filename={}.db.gz'.format(species_kegg),
-            '-O',
-            '{0}/{1}.db.gz'.format(ko_db_dir, species_kegg)]
+                                '-c',
+                                'http://kobas.cbi.pku.edu.cn/download_file.php?type=sqlite3&filename={}.db.gz'.format(
+                                    species_kegg),
+                                '-O',
+                                '{0}/{1}.db.gz'.format(ko_db_dir, species_kegg)]
 
             uncompress_db_cmd = ['gunzip',
-            '{0}/{1}.db.gz'.format(ko_db_dir, species_kegg)]
+                                 '{0}/{1}.db.gz'.format(ko_db_dir, species_kegg)]
 
-            kegg_cmd_list.extend([down_load_seq_cmd, uncompress_seq_cmd, mk_blast_db, down_load_db_cmd, uncompress_db_cmd])
-
+            kegg_cmd_list.extend([down_load_seq_cmd, uncompress_seq_cmd,
+                                  mk_blast_db, down_load_db_cmd, uncompress_db_cmd])
 
         blast_2_db = ['blastx',
-        '-query',
-        '{0}/{1}.transcript.fa'.format(annotation_dir, species_latin),
-        '-db',
-        '{0}/{1}.pep.fasta'.format(ko_pep_dir, species_kegg),
-        '-evalue',
-        '1e-5',
-        '-outfmt',
-        '6',
-        '-max_target_seqs',
-        '1',
-        '-num_threads',
-        BLAST_THREAD,
-        '-out',
-        '{0}/{1}.tr.kegg.blasttab'.format(annotation_dir, species_latin)]
-
+                      '-query',
+                      '{0}/{1}.transcript.fa'.format(annotation_dir,
+                                                     species_latin),
+                      '-db',
+                      '{0}/{1}.pep.fasta'.format(ko_pep_dir, species_kegg),
+                      '-evalue',
+                      '1e-5',
+                      '-outfmt',
+                      '6',
+                      '-max_target_seqs',
+                      '1',
+                      '-num_threads',
+                      BLAST_THREAD,
+                      '-out',
+                      '{0}/{1}.tr.kegg.blasttab'.format(annotation_dir, species_latin)]
 
         blast_tr2gene = ['python',
-        KEGG_BLAST_TR_TO_GENE,
-        ref_gtf,
-        '{0}/{1}.tr.kegg.blasttab'.format(annotation_dir, species_latin),
-        '{0}/{1}.gene.kegg.blasttab'.format(annotation_dir, species_latin)]
+                         KEGG_BLAST_TR_TO_GENE,
+                         ref_gtf,
+                         '{0}/{1}.tr.kegg.blasttab'.format(
+                             annotation_dir, species_latin),
+                         '{0}/{1}.gene.kegg.blasttab'.format(annotation_dir, species_latin)]
 
         kobas_anno = ['annotate.py',
-        '-i',
-        '{0}/{1}.gene.kegg.blasttab'.format(annotation_dir, species_latin),
-        '-t',
-        'blastout:tab',
-        '-s',
-        species_kegg,
-        '-o',
-        '{0}/{1}.gene.ko.anno'.format(annotation_dir, species_latin)]
+                      '-i',
+                      '{0}/{1}.gene.kegg.blasttab'.format(
+                          annotation_dir, species_latin),
+                      '-t',
+                      'blastout:tab',
+                      '-s',
+                      species_kegg,
+                      '-o',
+                      '{0}/{1}.gene.ko.anno'.format(annotation_dir, species_latin)]
 
         extract_ko_anno = ['python',
-        KEGG_ANNO_EXTRACT,
-        '{0}/{1}.gene.ko.anno'.format(annotation_dir, species_latin),
-        '{0}/{1}.gene.ko.anno.tab'.format(annotation_dir, species_latin)]
+                           KEGG_ANNO_EXTRACT,
+                           '{0}/{1}.gene.ko.anno'.format(
+                               annotation_dir, species_latin),
+                           '{0}/{1}.gene.ko.anno.tab'.format(annotation_dir, species_latin)]
 
-        kegg_cmd_list.extend([blast_2_db, blast_tr2gene, kobas_anno, extract_ko_anno])
+        kegg_cmd_list.extend(
+            [blast_2_db, blast_tr2gene, kobas_anno, extract_ko_anno])
         kegg_annotation_log_inf = run_cmd(kegg_cmd_list)
 
         with self.output().open('w') as kegg_annotation_log:
@@ -270,8 +285,9 @@ class prepare_collection(luigi.Task):
 
     def requires(self):
         global ref_fa, genome_dir, ref_gtf, annotation_dir, species_latin, species_ensembl, species_kegg, log_dir, ko_pep_dir, ko_db_dir
-        ref_fa, ref_gtf, species_latin= self.ref_fa, self.ref_gtf, self.species_latin
-        species_kegg, species_ensembl = get_kegg_biomart_id(KEGG_ORGANISM_JSON, species_latin)
+        ref_fa, ref_gtf, species_latin = self.ref_fa, self.ref_gtf, self.species_latin
+        species_kegg, species_ensembl = get_kegg_biomart_id(
+            KEGG_ORGANISM_JSON, species_latin)
         genome_dir = path.dirname(ref_fa)
         annotation_dir = path.dirname(ref_gtf)
         log_dir = path.join(annotation_dir, 'logs')
@@ -288,6 +304,7 @@ class prepare_collection(luigi.Task):
 
     def output(self):
         pass
+
 
 if __name__ == '__main__':
     luigi.run()

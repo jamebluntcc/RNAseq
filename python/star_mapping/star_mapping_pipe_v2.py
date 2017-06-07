@@ -165,8 +165,8 @@ class star_mapping_collection(luigi.Task):
     def run(self):
         ignore_files = ['.ignore', 'logs', 'mapping_dir',
                         'bam_dir', 'mapping_stats.plot', 'Rplots.pdf', 'mapping_stats.report']
-        pdf_report_files = ['mapping_stats_plot.png', 'mapping_stats.report']
-        pdf_report_ini = path.join(self.OutDir, '.pdf_files')
+        pdf_report_files = ['mapping_stats_plot.png', 'mapping_stats.report', 'mapping_stats.txt']
+        pdf_report_ini = path.join(self.OutDir, '.report_files')
         write_obj_to_json(pdf_report_files, pdf_report_ini)
         with self.output().open('w') as ignore_files_inf:
             for each_file in ignore_files:

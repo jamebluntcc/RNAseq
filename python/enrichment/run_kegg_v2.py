@@ -1,9 +1,10 @@
 '''
 Usage:
-    run_kegg.py --blast_out <ko_blast> --species <species_abbr> [--background <kegg_backgroud_sp>] --diff_dir <diff_directory> --out_dir <output_dir>
+    run_kegg.py --compare <compare_name> --blast_out <ko_blast> --species <species_abbr> [--background <kegg_backgroud_sp>] --diff_dir <diff_directory> --out_dir <output_dir>
 
 Options:
     -h --help                           Show this screen.
+    --compare=<compare_name>            analysis compare name
     --blast_out=<ko_blast>              all gene blast result.
     --species=<species_abbr>            kegg species abbr.
     --background=[<kegg_backgroud_sp>]  kegg background abbr, default is analysis species.
@@ -12,7 +13,6 @@ Options:
 '''
 
 from os import system
-from os import listdir
 from os import path
 from glob import glob
 from docopt import docopt
@@ -48,6 +48,7 @@ class KEGG_enrich:
         self.background = None
         self.diff_dir = None
         self.out_dir = None
+        self.compare = None
 
     def check_KOBAS_out(self, kobas_out):
         kobas_out_info = open(kobas_out, 'r').readlines()
@@ -83,43 +84,11 @@ class KEGG_enrich:
             **locals())
         return cmd
 
-    def run_kegg_pathview(self):
+    def run_kegg_pathview(self, each_diff_file):
         cmd_list = []
         pathway_log_dir = path.join(self.out_dir, 'kegg_pathway_logs')
         python_tools.circ_mkdir_unix(pathway_log_dir)
-        compare_list = listdir(self.diff_dir)
-        for each_compare in compare_list:
-            each_compare_diff_dir = path.join(self.diff_dir, each_compare)
-            each_compare_out_dir = path.join(self.out_dir, each_compare)
-            diff_out_list = glob(
-                '{}/*.edgeR.DE_results.txt'.format(each_compare_diff_dir))
-            for each_diff_file in diff_out_list:
-                each_diff_file_name = path.basename(each_diff_file)
-                each_out_prefix = each_diff_file_name.split(
-                    '.edgeR.DE_results')[0]
-                if 'UP' not in each_out_prefix:
-                    each_out_prefix = '{}.ALL'.format(each_out_prefix)
-                kegg_output = path.join(
-                    each_compare_out_dir, '%s.kegg.enrichment.txt' % (each_out_prefix))
-                pathway_outdir = path.join(
-                    each_compare_out_dir, '%s.pathway' % each_out_prefix)
-                pathview_check_log_file = path.join(
-                    pathway_log_dir, '%s.log' % (each_out_prefix))
-                pathview_cmd = 'python %s --kegg_table %s --blast_out %s --species %s --diff_out %s --out_dir %s' % (
-                    PATHVIEW, kegg_output, self.all_blast_out, self.species, each_diff_file, pathway_outdir)
-                pathview_check_cmd = 'python %s --kegg_table %s --pathway_dir %s --log_file %s' % (
-                    PATHVIEW_CK, kegg_output, pathway_outdir, pathview_check_log_file)
-                python_tools.circ_mkdir_unix(pathway_outdir)
-                python_tools.circ_call_process(pathview_cmd)
-                python_tools.circ_call_process(pathview_check_cmd)
-                cmd_list.extend([pathview_cmd, pathview_check_cmd])
-        return cmd_list
-
-    def run_kegg_pathview2(self, each_compare, each_diff_file):
-        cmd_list = []
-        pathway_log_dir = path.join(self.out_dir, 'kegg_pathway_logs')
-        python_tools.circ_mkdir_unix(pathway_log_dir)
-        each_compare_out_dir = path.join(self.out_dir, each_compare)
+        each_compare_out_dir = path.join(self.out_dir, self.compare)
         each_diff_file_name = path.basename(each_diff_file)
         each_out_prefix = each_diff_file_name.split(
                 '.edgeR.DE_results')[0]
@@ -145,43 +114,41 @@ class KEGG_enrich:
         cmd_list = []
         blast_out_dir = path.join(self.out_dir, 'blast_out')
         python_tools.circ_mkdir_unix(blast_out_dir)
-        compare_list = listdir(self.diff_dir)
-        for each_compare in compare_list:
-            each_compare_diff_dir = path.join(self.diff_dir, each_compare)
-            diff_gene_list = glob(
-                '{}/*.diffgenes.txt'.format(each_compare_diff_dir))
-            each_compare_out_dir = path.join(self.out_dir, each_compare)
-            python_tools.circ_mkdir_unix(each_compare_out_dir)
-            for each_diff_file in diff_gene_list:
-                each_diff_file_name = path.basename(each_diff_file)
-                each_out_prefix = each_diff_file_name.split(
-                    '.edgeR.DE_results')[0]
-                each_diff_inf_prefix = each_out_prefix
-                if 'UP' not in each_out_prefix:
-                    each_diff_inf_prefix = each_out_prefix.split('.')[0]
-                each_diff_inf_file = path.join(each_compare_diff_dir,'{}.edgeR.DE_results.txt'.format(each_diff_inf_prefix))
-                kegg_output = path.join(
-                    each_compare_out_dir, '%s.kegg.enrichment.txt' % (each_out_prefix))
-                each_blast_out = path.join(
-                    blast_out_dir, '%s.blasttab' % (each_out_prefix))
-                extract_each_blast_cmd = 'python %s --id %s --table %s --output %s' % (
-                    EXTRACT_INF_BY_ID, each_diff_file, self.all_blast_out, each_blast_out)
-                kegg_cmd = self.generate_kobas(each_blast_out, kegg_output)
-                python_tools.circ_call_process(extract_each_blast_cmd)
-                cmd_list.append(extract_each_blast_cmd)
-                if path.exists(each_blast_out):
-                    python_tools.circ_call_process(kegg_cmd)
-                    cmd_list.append(kegg_cmd)
-                    if path.exists(kegg_output):
-                        self.treat_KEGG_table(kegg_output)
-                        txt_to_excel(kegg_output)
-                        #pathway_cmd = self.run_kegg_pathview2(each_compare, each_diff_inf_file)
-                        #cmd_list.extend(pathway_cmd)
-                    else:
-                        cmd_list.append(
-                            "## {} not exists!".format(kegg_output))
+        each_compare_diff_dir = path.join(self.diff_dir, self.compare)
+        diff_gene_list = glob(
+            '{}/*.diffgenes.txt'.format(each_compare_diff_dir))
+        each_compare_out_dir = path.join(self.out_dir, self.compare)
+        python_tools.circ_mkdir_unix(each_compare_out_dir)
+        for each_diff_file in diff_gene_list:
+            each_diff_file_name = path.basename(each_diff_file)
+            each_out_prefix = each_diff_file_name.split(
+                '.edgeR.DE_results')[0]
+            each_diff_inf_prefix = each_out_prefix
+            if 'UP' not in each_out_prefix:
+                each_diff_inf_prefix = each_out_prefix.split('.')[0]
+            each_diff_inf_file = path.join(each_compare_diff_dir,'{}.edgeR.DE_results.txt'.format(each_diff_inf_prefix))
+            kegg_output = path.join(
+                each_compare_out_dir, '%s.kegg.enrichment.txt' % (each_out_prefix))
+            each_blast_out = path.join(
+                blast_out_dir, '%s.blasttab' % (each_out_prefix))
+            extract_each_blast_cmd = 'python %s --id %s --table %s --output %s' % (
+                EXTRACT_INF_BY_ID, each_diff_file, self.all_blast_out, each_blast_out)
+            kegg_cmd = self.generate_kobas(each_blast_out, kegg_output)
+            python_tools.circ_call_process(extract_each_blast_cmd)
+            cmd_list.append(extract_each_blast_cmd)
+            if path.exists(each_blast_out):
+                python_tools.circ_call_process(kegg_cmd)
+                cmd_list.append(kegg_cmd)
+                if path.exists(kegg_output):
+                    self.treat_KEGG_table(kegg_output)
+                    txt_to_excel(kegg_output)
+                    pathway_cmd = self.run_kegg_pathview(each_diff_inf_file)
+                    cmd_list.extend(pathway_cmd)
                 else:
-                    cmd_list.append("## {} not exists!".format(each_blast_out))
+                    cmd_list.append(
+                        "## {} not exists!".format(kegg_output))
+            else:
+                cmd_list.append("## {} not exists!".format(each_blast_out))
         return cmd_list
 
 
@@ -196,4 +163,5 @@ if __name__ == '__main__':
         my_kegg_enrich.background = my_kegg_enrich.species
     my_kegg_enrich.diff_dir = arguments['--diff_dir']
     my_kegg_enrich.out_dir = arguments['--out_dir']
+    my_kegg_enrich.compare = arguments['--compare']
     my_kegg_enrich.run_KEGG_enrich()

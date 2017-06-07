@@ -145,10 +145,10 @@ class fastqc_collection(luigi.Task):
         return [reads_quality_plot(OutDir=OutDir), gc_plot(OutDir=OutDir)]
 
     def run(self):
-        ignore_files = ['.ignore', 'logs', 'fastqc_results/*zip', '.pdf_files']
+        ignore_files = ['.ignore', 'logs', 'fastqc_results/*zip', '.report_files']
         pdf_report_files = ['fastqc_general_stats.txt',
-                            'gc_plot/gc_distribution.line.png', 'reads_quality_plot/reads_quality.bar.png']
-        pdf_report_ini = path.join(self.OutDir, '.pdf_files')
+                            'gc_plot/*gc_distribution.line.png', 'reads_quality_plot/*reads_quality.bar.png']
+        pdf_report_ini = path.join(self.OutDir, '.report_files')
         write_obj_to_json(pdf_report_files, pdf_report_ini)
         with self.output().open('w') as ignore_files_inf:
             for each_file in ignore_files:

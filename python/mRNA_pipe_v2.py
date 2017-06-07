@@ -27,8 +27,8 @@ sys.path.insert(0, snp_dir)
 sys.path.insert(0, splicing_dir)
 
 import fastqc_pipe_v2
-import quant_pipe
-import enrich_pipe
+import quant_pipe_v2 as quant_pipe
+import enrich_pipe_v2 as enrich_pipe
 import star_mapping_pipe_v2
 import rseqc_pipe
 import snp_pipe
@@ -201,7 +201,7 @@ class pdf_report_data(luigi.Task):
     def run(self):
         from_dir_name = path.basename(self.from_dir)
         to_dir = path.join(self.to_dir, from_dir_name)
-        report_files_ini = path.join(self.from_dir, '.pdf_files')
+        report_files_ini = path.join(self.from_dir, '.report_files')
         if not path.exists(report_files_ini):
             cp_cmd_inf = 'nothing for report in {}'.format(from_dir_name)
         else:
@@ -210,8 +210,8 @@ class pdf_report_data(luigi.Task):
             cp_cmd_list = []
             for each_file in report_files_list:
                 each_file_path = path.join(self.from_dir, each_file)
-                cp_cmd_list.append(['cp', each_file_path, to_dir])
-            cp_cmd_inf = run_cmd(cp_cmd_list)
+                cp_cmd_list.append(['cp {0} {1}'.format(each_file_path, to_dir)])
+            cp_cmd_inf = run_cmd(cp_cmd_list, True)
         with self.output().open('w') as cp_cmd_log:
             cp_cmd_log.write(cp_cmd_inf)
 
@@ -307,7 +307,7 @@ class run_pipe(luigi.Task):
 
     def run(self):
         yield [cp_analysis_result(each_folder, result_dir) for each_folder in analysis_folders]
-        pdf_report_data_dir = path.join(report_dir, 'pdf_data')
+        pdf_report_data_dir = path.join(report_dir, 'report_data')
         yield [pdf_report_data(each_folder, pdf_report_data_dir) for each_folder in analysis_folders]
         with self.output().open('w') as analysis_log:
             analysis_log.write('analysis finished')

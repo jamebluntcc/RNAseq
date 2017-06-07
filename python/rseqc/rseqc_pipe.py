@@ -275,9 +275,9 @@ class rseqc_collection(luigi.Task):
                         'inner_distance/*inner_distance_plot*', 'inner_distance/*inner_distance.txt',
                         'infer_experiment', 'genebody_coverage/*geneBodyCoverage.curves.pdf',
                         'genebody_coverage/*geneBodyCoverage.r', 'Rplots.pdf']
-        pdf_report_files = ['inner_distance/inner_distance.bar.png', 'read_duplication/reads_duplication.point.png',
-                            'genebody_coverage/genebody_coverage.point.png', 'read_distribution/read_distribution.bar.png']
-        pdf_report_ini = path.join(self.OutDir, '.pdf_files')
+        pdf_report_files = ['inner_distance/*inner_distance.bar.png', 'read_duplication/*reads_duplication.point.png',
+                            'genebody_coverage/*genebody_coverage.point.png', 'read_distribution/read_distribution.bar.png', 'read_distribution/*read_distribution.pie.png']
+        pdf_report_ini = path.join(self.OutDir, '.report_files')
         write_obj_to_json(pdf_report_files, pdf_report_ini)
         with self.output().open('w') as ignore_files_inf:
             for each_file in ignore_files:

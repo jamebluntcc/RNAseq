@@ -7,18 +7,7 @@ from os import system
 from python_tools import load_fn_to_obj
 from python_tools import circ_mkdir_unix
 import pandas as pd
-
-# class No_task(luigi.Task):
-#     '''
-#     empty task
-#     '''
-#
-#     def run(self):
-#         pass
-#
-#     def output(self):
-#         pass
-
+from glob import glob
 
 def get_kegg_biomart_id(kegg_map_json, sp_latin):
     kegg_map_dict = load_fn_to_obj(kegg_map_json)
@@ -36,14 +25,14 @@ def get_ip_address():
     return s.getsockname()[0]
 
 
-def run_cmd(cmd_obj):
+def run_cmd(cmd_obj, is_shell_cmd=False):
     if not cmd_obj:
         sys.exit('empty cmd')
     elif isinstance(cmd_obj[0], str):
         # p = subprocess.Popen(cmd_obj, shell=False,
         #                      universal_newlines=True, stdout=subprocess.PIPE)
         p = subprocess.Popen(
-            cmd_obj, universal_newlines=True, stdout=subprocess.PIPE)
+            cmd_obj, universal_newlines=True, stdout=subprocess.PIPE, shell=is_shell_cmd)
         output = p.communicate()[0]
     elif isinstance(cmd_obj[0], list):
         output_list = []
@@ -57,7 +46,7 @@ def run_cmd(cmd_obj):
             #     print each_cmd
             # for run
             p = subprocess.Popen(
-                each_cmd, universal_newlines=True, stdout=subprocess.PIPE)
+                each_cmd, universal_newlines=True, stdout=subprocess.PIPE, shell=is_shell_cmd)
             output_list.append(p.communicate()[0])
         output = '\n'.join(output_list)
     else:
@@ -100,6 +89,21 @@ def get_diff_as_plot_cmd(rmats_results, compare_list, bam_file_list, as_type, ou
 
     return plot_cmd
 
+def get_enrichment_data(enrichment_dir, plots_num = 10):
+    pathway_plots = glob('{}/kegg/*/*pathway/*pathview.png'.format(enrichment_dir))[:10]
+    go_enrich_table = glob('{}/go/*/*.ALL.go.enrichment.txt'.format(enrichment_dir))[0]
+    go_enrich_table_report = path.join(enrichment_dir, 'report.go.table.txt')
+    system('cut -f1-7 {0} > {1}'.format(go_enrich_table, go_enrich_table_report))
+    kegg_enrich_table = glob('{}/kegg/*/*.ALL.kegg.enrichment.txt'.format(enrichment_dir))[0]
+    kegg_enrich_table_report = path.join(enrichment_dir, 'report.kegg.table.txt')
+    system('cut -f1-7 {0} > {1}'.format(kegg_enrich_table, kegg_enrich_table_report))
+    repor_data = [go_enrich_table_report, kegg_enrich_table_report]
+    repor_data.extend([each.lstrip('{}/'.format(enrichment_dir)) for each in pathway_plots])
+    return repor_data
+
+
+
+
 
 # read confiture
 script_path = path.dirname(path.abspath(__file__))
@@ -132,6 +136,9 @@ PICARD_PATH = conf.get(server_name, 'picard_path')
 # B
 BIOMART_DOWNLOAD = conf.get(server_name, 'biomart_download')
 
+# D
+DIFF_ANALYSIS = conf.get(server_name, 'diff_analysis')
+
 # E
 ENRICH_BARPLOT_R = conf.get(server_name, 'enrich_barplot_r')
 EXTRACT_INF_BY_ID = conf.get(server_name, 'extract_inf_by_id')
@@ -148,6 +155,7 @@ GO_ANNO = conf.get(server_name, 'go_anno')
 
 # K
 KALLISTO_TO_DIFF = conf.get(server_name, 'kallisto_to_diff')
+KALLISTO_TO_TABLE = conf.get(server_name, 'kallisto_to_table')
 KEGG_ANALYSIS_PYTHON = conf.get(server_name, 'kegg_analysis_python')
 KEGG_ANNO_EXTRACT = conf.get(server_name, 'kegg_anno_extract')
 KEGG_BLAST_TR_TO_GENE = conf.get(server_name, 'kegg_blast_tr_to_gene')
@@ -155,6 +163,9 @@ KEGG_BLAST_TR_TO_GENE = conf.get(server_name, 'kegg_blast_tr_to_gene')
 # P
 PATHVIEW = conf.get(server_name, 'pathview')
 PATHVIEW_CK = conf.get(server_name, 'pathview_ck')
+
+# Q
+QUANT_REPORT = conf.get(server_name, 'quant_report')
 
 # R
 READ_DISTRIBUTION_PLOT_PREPARE = conf.get(

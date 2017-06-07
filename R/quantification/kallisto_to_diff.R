@@ -115,21 +115,21 @@ for (i in seq(dim(all_combine)[2])) {
   down_regulate_df <- filter(sorted_merged_df, logFC <= -(logfc), FDR <= qvalue)
   diff_genes <- c(diff_genes, up_regulate_df$Gene_ID, down_regulate_df$Gene_ID)
 
-  write.table(sorted_merged_df, file=paste(out_file_name_prefix, 'edgeR.DE_results', 'txt', sep = '.'), sep='\t', quote=F, row.names=F)
+  write.table(sorted_merged_df, file=paste(out_file_name_prefix, 'edgeR.DE_results.txt', sep = '.'), sep='\t', quote=F, row.names=F)
   #write.xlsx(sorted_merged_df, file = paste(out_file_name_prefix, 'edgeR.DE_results', 'xlsx', sep = '.'), sheetName = each_compare_name, append = F, row.names = F)
   if (dim(up_regulate_df)[1] > 0) {
-    write.table(up_regulate_df, file=paste(up_regulate_name_prefix, 'edgeR.DE_results', 'txt', sep = '.'), sep='\t', quote=F, row.names=F)
+    write.table(up_regulate_df, file=paste(up_regulate_name_prefix, 'edgeR.DE_results.txt', sep = '.'), sep='\t', quote=F, row.names=F)
     #write.xlsx(up_regulate_df, file = paste(up_regulate_name_prefix, 'edgeR.DE_results', 'xlsx', sep = '.'), sheetName = each_compare_name, append = F, row.names = F)
-    write(as.character(up_regulate_df$Gene_ID), file = paste(up_regulate_name_prefix, 'edgeR.DE_results.diffgenes', 'txt', sep = '.'), sep = '\n')
+    write(as.character(up_regulate_df$Gene_ID), file = paste(up_regulate_name_prefix, 'edgeR.DE_results.diffgenes.txt', sep = '.'), sep = '\n')
   }
   if (dim(down_regulate_df)[1] > 0) {
-    write.table(down_regulate_df, file=paste(down_regulate_name_prefix, 'edgeR.DE_results', 'txt', sep = '.'), sep='\t', quote=F, row.names=F)
+    write.table(down_regulate_df, file=paste(down_regulate_name_prefix, 'edgeR.DE_results.txt', sep = '.'), sep='\t', quote=F, row.names=F)
     #write.xlsx(down_regulate_df, file = paste(down_regulate_name_prefix, 'edgeR.DE_results', 'xlsx', sep = '.'), sheetName = each_compare_name, append = F, row.names = F)
-    write(as.character(down_regulate_df$Gene_ID), file = paste(down_regulate_name_prefix, 'edgeR.DE_results.diffgenes', 'txt', sep = '.'), sep = '\n')
+    write(as.character(down_regulate_df$Gene_ID), file = paste(down_regulate_name_prefix, 'edgeR.DE_results.diffgenes.txt', sep = '.'), sep = '\n')
   }
   ## write diff gene list
   if (length(diff_genes) > 0) {
-    write(as.character(diff_genes), file = paste(out_file_name_prefix, 'ALL', 'edgeR.DE_results.diffgenes', 'txt', sep = '.'), sep = '\n')
+    write(as.character(diff_genes), file = paste(out_file_name_prefix, 'ALL.edgeR.DE_results.diffgenes.txt', sep = '.'), sep = '\n')
   }
   ## volcano plot
   om_volcano_plot(sorted_merged_df, each_compare_name, logfc, qvalue, each_pair_outdir)
@@ -149,7 +149,7 @@ if (dim(out_diff_gene_count_matrix)[1] > 0) {
   write.table(out_diff_gene_tpm_matrix, file = paste(expression_stat_dir, 'Diff.gene.tpm.txt', sep = '/'), quote = F, row.names = F, sep = '\t')
   #write.xlsx(out_diff_gene_tpm_matrix, file = paste(expression_stat_dir, 'Diff.gene.tpm.xlsx', sep = '/'), sheetName = "gene.tpm", append = FALSE, row.names = F)
   ## heatmap
-  om_heatmap(plot_data = diff_gene_tpm_matrix, samples = samples, outdir = expression_stat_dir)  
+  om_heatmap(plot_data = diff_gene_tpm_matrix, samples = samples, outdir = expression_stat_dir)
 }
 
 
