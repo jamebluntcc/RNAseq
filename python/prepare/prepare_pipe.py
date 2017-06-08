@@ -14,7 +14,6 @@ from RNAseq_lib import TRANSCRIPT_FEATURE
 from RNAseq_lib import GO_ANNO
 from RNAseq_lib import KEGG_BLAST_TR_TO_GENE
 from RNAseq_lib import KEGG_ANNO_EXTRACT
-from RNAseq_lib import KEGG_ORGANISM_JSON
 from RNAseq_lib import get_kegg_biomart_id
 from python_tools import circ_mkdir_unix
 
@@ -220,6 +219,7 @@ class ko_annotation(luigi.Task):
                                 '{0}/{1}.db.gz'.format(ko_db_dir, species_kegg)]
 
             uncompress_db_cmd = ['gunzip',
+                                 '-f',
                                  '{0}/{1}.db.gz'.format(ko_db_dir, species_kegg)]
 
             kegg_cmd_list.extend([down_load_seq_cmd, uncompress_seq_cmd,
@@ -286,8 +286,7 @@ class prepare_collection(luigi.Task):
     def requires(self):
         global ref_fa, genome_dir, ref_gtf, annotation_dir, species_latin, species_ensembl, species_kegg, log_dir, ko_pep_dir, ko_db_dir
         ref_fa, ref_gtf, species_latin = self.ref_fa, self.ref_gtf, self.species_latin
-        species_kegg, species_ensembl = get_kegg_biomart_id(
-            KEGG_ORGANISM_JSON, species_latin)
+        species_kegg, species_ensembl = get_kegg_biomart_id(species_latin)
         genome_dir = path.dirname(ref_fa)
         annotation_dir = path.dirname(ref_gtf)
         log_dir = path.join(annotation_dir, 'logs')
