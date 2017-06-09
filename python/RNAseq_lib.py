@@ -4,6 +4,7 @@ import subprocess
 from ConfigParser import ConfigParser
 from os import path
 from os import system
+from os import listdir
 from python_tools import load_fn_to_obj
 from python_tools import circ_mkdir_unix
 import pandas as pd
@@ -115,6 +116,9 @@ MYSQL_DATABASE = conf.get(server_name, 'mysql_database')
 KEGG_ORGANISM_TXT = conf.get(server_name, 'kegg_organism_txt')
 KEGG_ORGANISM_JSON = conf.get(server_name, 'kegg_organism_json')
 
+# P
+PROJECT_DIR = conf.get(server_name, 'project_dir')
+
 # S
 SWISSPROT_FASTA = conf.get(server_name, 'swissprot_fasta')
 
@@ -179,7 +183,6 @@ class sepcies_annotation_path:
         sp_database_dirs = glob(
             '{0}/{1}/*/{2}/annotation/{3}'.format(DATABASE_DIR, self.sp_database, self.sp_latin, self.sp_db_version))
         if not sp_database_dirs:
-            # print '{0}/{1}/*/{2}/annotation/{3}'.format(DATABASE_DIR, self.sp_database, self.sp_latin, self.sp_db_version)
             sys.exit('database [{0}|{1}|{2}] not prepared!'.format(
                 self.sp_latin, self.sp_database, self.sp_db_version))
         sp_database_dir = sp_database_dirs[0]
@@ -266,9 +269,22 @@ def get_diff_as_plot_cmd(rmats_results, compare_list, bam_file_list, as_type, ou
     return plot_cmd
 
 
+def rsync_pattern_to_file(from_dir, pattern_list):
+    pattern_path_list = [
+        '{0}/{1}'.format(from_dir, each_pattern) for each_pattern in pattern_list]
+    file_path_list = []
+    for each_path in pattern_path_list:
+        file_path_list.extend(glob(each_path))
+    return [each.split('{}/'.format(from_dir))[1] for each in file_path_list]
+
+
 def get_enrichment_data(enrichment_dir, plots_num=10):
-    pathway_plots = glob(
-        '{}/kegg/*/*pathway/*pathview.png'.format(enrichment_dir))[:10]
+    go_dir = path.join(enrichment_dir, 'go')
+    compare_list = listdir(go_dir)
+    pathway_plots = []
+    for each_compare in compare_list:
+        pathway_plots.extend(rsync_pattern_to_file(enrichment_dir, [
+                             'kegg/{}/*ALL.pathway/*pathview.png'.format(each_compare)])[:10])
     go_enrich_table = glob(
         '{}/go/*/*.ALL.go.enrichment.txt'.format(enrichment_dir))[0]
     go_enrich_table_report = path.join(enrichment_dir, 'report.go.table.txt')
@@ -280,10 +296,22 @@ def get_enrichment_data(enrichment_dir, plots_num=10):
         enrichment_dir, 'report.kegg.table.txt')
     system('cut -f1-7 {0} > {1}'.format(kegg_enrich_table,
                                         kegg_enrich_table_report))
-    repor_data = [go_enrich_table_report, kegg_enrich_table_report]
-    repor_data.extend([each.lstrip('{}/'.format(enrichment_dir))
-                       for each in pathway_plots])
+    repor_data = ['report.go.table.txt', 'report.kegg.table.txt']
+    repor_data.extend(pathway_plots)
     return repor_data
+
+
+def txt_to_excel(txt_file, sheet_name='Sheet1'):
+    pd.formats.format.header_style = None
+    txt_df = pd.read_table(txt_file)
+    txt_file_name = path.basename(txt_file)
+    txt_file_dir = path.dirname(txt_file)
+    txt_file_prefix = path.splitext(txt_file_name)[0]
+    excel_file = path.join(txt_file_dir, '{}.xlsx'.format(txt_file_prefix))
+    writer = pd.ExcelWriter(excel_file, engine='xlsxwriter', options={
+                            'strings_to_urls': False})
+    txt_df.to_excel(writer, sheet_name, index=False)
+    writer.save()
 
 
 def main():

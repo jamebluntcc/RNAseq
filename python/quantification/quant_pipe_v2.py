@@ -1,5 +1,6 @@
 import luigi
 from os import path
+from os import walk
 import sys
 import pandas as pd
 import itertools
@@ -8,10 +9,12 @@ script_path = path.dirname(path.abspath(__file__))
 RNAseq_lib_path = path.join(script_path, '..')
 sys.path.insert(0, RNAseq_lib_path)
 from RNAseq_lib import run_cmd
-from python_tools import write_obj_to_json
 from RNAseq_lib import KALLISTO_TO_TABLE
 from RNAseq_lib import DIFF_ANALYSIS
 from RNAseq_lib import QUANT_REPORT
+from RNAseq_lib import rsync_pattern_to_file
+from RNAseq_lib import txt_to_excel
+from python_tools import write_obj_to_file
 
 
 class prepare(luigi.Task):
@@ -133,6 +136,31 @@ class run_diff(luigi.Task):
         return luigi.LocalTarget('{0}/logs/diff_analysis_{1}.log'.format(OutDir, self.compare))
 
 
+class get_excel_table(luigi.Task):
+
+    '''
+    generate excel format table
+    '''
+    OutDir = luigi.Parameter()
+
+    def requires(self):
+        return [run_diff(compare=each_compare, OutDir=OutDir) for each_compare in compare_name_list]
+
+    def run(self):
+
+        for dirpath, dirnames, filenames in walk(OutDir):
+            for each_file in filenames:
+                if each_file.endswith('.txt'):
+                    each_file_path = path.join(dirpath, each_file)
+                    txt_to_excel(each_file_path)
+
+        with self.output().open('w') as get_excel_table_log:
+            get_excel_table_log.write('txt to excel finished')
+
+    def output(self):
+        return luigi.LocalTarget('{0}/logs/get_excel_table.log'.format(OutDir))
+
+
 class report_data(luigi.Task):
     '''
     generate table and plots for report
@@ -140,7 +168,7 @@ class report_data(luigi.Task):
     OutDir = luigi.Parameter()
 
     def requires(self):
-        return [run_diff(compare=each_compare, OutDir=OutDir) for each_compare in compare_name_list]
+        return get_excel_table(OutDir=OutDir)
 
     def run(self):
         report_tb_cmd = ['Rscript',
@@ -186,12 +214,14 @@ class quant_collection(luigi.Task):
     def run(self):
         ignore_files = ['.ignore', 'logs', 'kallisto/*/run_info.json',
                         '.report_files', 'Rplots.pdf']
-        report_files = ['expression_summary/*.png',
+        report_files_pattern = ['expression_summary/*.png',
                         'differential_analysis/*/*png',
                         'expression_summary/*Gene.tpm.txt',
-                        'expression_summary/*example.diff.table.txt']
+                        'expression_summary/*example.diff.table.txt',
+                        'differential_analysis/*/*.edgeR.DE_results.txt']
+        report_files = rsync_pattern_to_file(self.OutDir, report_files_pattern)
         report_ini = path.join(self.OutDir, '.report_files')
-        write_obj_to_json(report_files, report_ini)
+        write_obj_to_file(report_files, report_ini)
         with self.output().open('w') as ignore_inf:
             for each_file in ignore_files:
                 ignore_inf.write('{}\n'.format(each_file))

@@ -6,12 +6,13 @@ import sys
 script_path = path.dirname(path.abspath(__file__))
 RNAseq_lib_path = path.join(script_path, '..')
 sys.path.insert(0, RNAseq_lib_path)
-from python_tools import write_obj_to_json
 from RNAseq_lib import run_cmd
 from RNAseq_lib import get_enrichment_data
 from RNAseq_lib import GO_ANALYSIS_R
 from RNAseq_lib import KEGG_ANALYSIS_PYTHON
 from RNAseq_lib import ENRICH_BARPLOT_R
+from RNAseq_lib import rsync_pattern_to_file
+from python_tools import write_obj_to_file
 
 
 class prepare(luigi.Task):
@@ -205,17 +206,18 @@ class enrichment_collection(luigi.Task):
         compare_list = listdir(diff_dir)
         return [(run_kegg_barplot(compare=each_compare, OutDir=OutDir), run_go_barplot(compare=each_compare, OutDir=OutDir)) for each_compare in compare_list]
 
-
     def run(self):
         ignore_files = ['.ignore', 'logs', 'kegg/blast_out',
                         'kegg/kegg_pathway_logs', '.report_files',
                         'report.go.table.txt', 'report.kegg.table.txt']
-        report_files = ['go/*/*go.enrichment.barplot.png', 'kegg/*/*kegg.enrichment.barplot.png',
-                        'go/*/DAG/ALL*png']
+        report_files_pattern = ['go/*/*go.enrichment.barplot.png', 'kegg/*/*kegg.enrichment.barplot.png',
+                                'go/*/DAG/ALL*png', 'go/*/*.ALL.go.enrichment.txt',
+                                'kegg/*/*ALL.kegg.enrichment.txt']
+        report_files = rsync_pattern_to_file(self.OutDir, report_files_pattern)
         pathway_plots = get_enrichment_data(self.OutDir)
         report_files.extend(pathway_plots)
         report_ini = path.join(self.OutDir, '.report_files')
-        write_obj_to_json(report_files, report_ini)
+        write_obj_to_file(report_files, report_ini)
         with self.output().open('w') as ignore_inf:
             for each_file in ignore_files:
                 ignore_inf.write('{}\n'.format(each_file))

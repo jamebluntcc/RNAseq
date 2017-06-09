@@ -12,7 +12,8 @@ from RNAseq_lib import FASTQC
 from RNAseq_lib import GC_PLOT
 from RNAseq_lib import RQ_PLOT
 from RNAseq_lib import run_cmd
-from python_tools import write_obj_to_json
+from RNAseq_lib import rsync_pattern_to_file
+from python_tools import write_obj_to_file
 
 
 class prepare(luigi.Task):
@@ -146,10 +147,11 @@ class fastqc_collection(luigi.Task):
 
     def run(self):
         ignore_files = ['.ignore', 'logs', 'fastqc_results/*zip', '.report_files']
-        pdf_report_files = ['fastqc_general_stats.txt',
+        pdf_report_files_pattern = ['fastqc_general_stats.txt',
                             'gc_plot/*gc_distribution.line.png', 'reads_quality_plot/*reads_quality.bar.png']
+        pdf_report_files = rsync_pattern_to_file(self.OutDir, pdf_report_files_pattern)
         pdf_report_ini = path.join(self.OutDir, '.report_files')
-        write_obj_to_json(pdf_report_files, pdf_report_ini)
+        write_obj_to_file(pdf_report_files, pdf_report_ini)
         with self.output().open('w') as ignore_files_inf:
             for each_file in ignore_files:
                 ignore_files_inf.write('{}\n'.format(each_file))

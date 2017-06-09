@@ -7,7 +7,8 @@ RNAseq_lib_path = path.join(script_path, '..')
 sys.path.insert(0, RNAseq_lib_path)
 from RNAseq_lib import run_cmd
 from RNAseq_lib import KALLISTO_TO_DIFF
-from python_tools import write_obj_to_json
+from RNAseq_lib import rsync_pattern_to_file
+from python_tools import write_obj_to_file
 
 
 class prepare(luigi.Task):
@@ -110,7 +111,7 @@ class quant_collection(luigi.Task):
         ignore_files = ['.ignore', 'logs', 'kallisto/*/run_info.json']
         pdf_report_files = ['Gene_expression.png', 'Sample.correlation.heatmap.png', 'PCA_plot.png', 'Diff.genes.heatmap.png']
         pdf_report_ini = path.join(self.OutDir, '.pdf_files')
-        write_obj_to_json(pdf_report_files, pdf_report_ini)
+        rsync_pattern_to_file(pdf_report_files, pdf_report_ini)
         with self.output().open('w') as ignore_inf:
             for each_file in ignore_files:
                 ignore_inf.write('{}\n'.format(each_file))

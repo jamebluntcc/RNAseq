@@ -9,7 +9,8 @@ sys.path.insert(0, RNAseq_lib_path)
 from RNAseq_lib import run_cmd
 from RNAseq_lib import READ_DISTRIBUTION_PLOT_PREPARE
 from RNAseq_lib import RSEQC_PLOT_R
-from python_tools import write_obj_to_json
+from RNAseq_lib import rsync_pattern_to_file
+from python_tools import write_obj_to_file
 
 
 class prepare(luigi.Task):
@@ -275,10 +276,11 @@ class rseqc_collection(luigi.Task):
                         'inner_distance/*inner_distance_plot*', 'inner_distance/*inner_distance.txt',
                         'infer_experiment', 'genebody_coverage/*geneBodyCoverage.curves.pdf',
                         'genebody_coverage/*geneBodyCoverage.r', 'Rplots.pdf']
-        pdf_report_files = ['inner_distance/*inner_distance.bar.png', 'read_duplication/*reads_duplication.point.png',
+        pdf_report_files_pattern = ['inner_distance/*inner_distance.bar.png', 'read_duplication/*reads_duplication.point.png',
                             'genebody_coverage/*genebody_coverage.point.png', 'read_distribution/read_distribution.bar.png', 'read_distribution/*read_distribution.pie.png']
+        pdf_report_files = rsync_pattern_to_file(self.OutDir, pdf_report_files_pattern)
         pdf_report_ini = path.join(self.OutDir, '.report_files')
-        write_obj_to_json(pdf_report_files, pdf_report_ini)
+        write_obj_to_file(pdf_report_files, pdf_report_ini)
         with self.output().open('w') as ignore_files_inf:
             for each_file in ignore_files:
                 ignore_files_inf.write('{}\n'.format(each_file))

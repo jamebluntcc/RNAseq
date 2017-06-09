@@ -16,7 +16,6 @@ from os import system
 from os import path
 from glob import glob
 from docopt import docopt
-import pandas as pd
 import sys
 
 script_path = path.dirname(path.abspath(__file__))
@@ -26,19 +25,7 @@ import python_tools
 from RNAseq_lib import EXTRACT_INF_BY_ID
 from RNAseq_lib import PATHVIEW
 from RNAseq_lib import PATHVIEW_CK
-
-
-def txt_to_excel(txt_file, sheet_name='Sheet1'):
-    pd.formats.format.header_style = None
-    txt_df = pd.read_table(txt_file)
-    txt_file_name = path.basename(txt_file)
-    txt_file_dir = path.dirname(txt_file)
-    txt_file_prefix = path.splitext(txt_file_name)[0]
-    excel_file = path.join(txt_file_dir, '{}.xlsx'.format(txt_file_prefix))
-    writer = pd.ExcelWriter(excel_file, engine='xlsxwriter', options={
-                            'strings_to_urls': False})
-    txt_df.to_excel(writer, sheet_name, index=False)
-    writer.save()
+from RNAseq_lib import txt_to_excel
 
 
 class KEGG_enrich:
@@ -91,7 +78,7 @@ class KEGG_enrich:
         each_compare_out_dir = path.join(self.out_dir, self.compare)
         each_diff_file_name = path.basename(each_diff_file)
         each_out_prefix = each_diff_file_name.split(
-                '.edgeR.DE_results')[0]
+            '.edgeR.DE_results')[0]
         if 'UP' not in each_out_prefix:
             each_out_prefix = '{}.ALL'.format(each_out_prefix)
         kegg_output = path.join(
@@ -126,7 +113,8 @@ class KEGG_enrich:
             each_diff_inf_prefix = each_out_prefix
             if 'UP' not in each_out_prefix:
                 each_diff_inf_prefix = each_out_prefix.split('.')[0]
-            each_diff_inf_file = path.join(each_compare_diff_dir,'{}.edgeR.DE_results.txt'.format(each_diff_inf_prefix))
+            each_diff_inf_file = path.join(
+                each_compare_diff_dir, '{}.edgeR.DE_results.txt'.format(each_diff_inf_prefix))
             kegg_output = path.join(
                 each_compare_out_dir, '%s.kegg.enrichment.txt' % (each_out_prefix))
             each_blast_out = path.join(

@@ -1,11 +1,10 @@
-'''
-
-'''
+#! /usr/bin/python
 
 import luigi
 from os import path
 import sys
 from RNAseq_lib import run_cmd
+from RNAseq_lib import sepcies_annotation_path
 from python_tools import circ_mkdir_unix
 from python_tools import load_fn_to_obj
 
@@ -168,7 +167,8 @@ class release_analysis_data(luigi.Task):
     def run(self):
 
         analysis_bam_dir = path.join(mapping_dir, 'bam_dir')
-        out_data_dir = path.join(proj_dir, '{}_analysis_data'.format(proj_name))
+        out_data_dir = path.join(
+            proj_dir, '{}_analysis_data'.format(proj_name))
         out_bam_dir = path.join(out_data_dir, 'bam')
         fq_dir = path.join(out_data_dir, 'fq')
 
@@ -206,12 +206,18 @@ class pdf_report_data(luigi.Task):
             cp_cmd_inf = 'nothing for report in {}'.format(from_dir_name)
         else:
             circ_mkdir_unix(to_dir)
-            report_files_list = load_fn_to_obj(report_files_ini)
-            cp_cmd_list = []
-            for each_file in report_files_list:
-                each_file_path = path.join(self.from_dir, each_file)
-                cp_cmd_list.append(['cp {0} {1}'.format(each_file_path, to_dir)])
-            cp_cmd_inf = run_cmd(cp_cmd_list, True)
+            # report_files_list = load_fn_to_obj(report_files_ini)
+        #     cp_cmd_list = []
+        #     for each_file in report_files_list:
+        #         each_file_path = path.join(self.from_dir, each_file)
+        #         cp_cmd_list.append(['cp {0} {1}'.format(each_file_path, to_dir)])
+        #     cp_cmd_inf = run_cmd(cp_cmd_list, True)
+            cp_cmd = ['rsync',
+                      '-av',
+                      '--files-from={}'.format(report_files_ini),
+                      self.from_dir,
+                      to_dir]
+            cp_cmd_inf = run_cmd(cp_cmd)
         with self.output().open('w') as cp_cmd_log:
             cp_cmd_log.write(cp_cmd_inf)
 
@@ -227,22 +233,14 @@ class run_pipe(luigi.Task):
     proj_dir = luigi.Parameter()
     clean_dir = luigi.Parameter()
     sample_inf = luigi.Parameter()
-    analysis = luigi.Parameter()
-    transcript = luigi.Parameter()
-    gene_tr = luigi.Parameter()
-    goseq_ano = luigi.Parameter()
-    topgo_ano = luigi.Parameter()
-    gene_len = luigi.Parameter()
-    kegg_abbr = luigi.Parameter()
-    kegg_blast = luigi.Parameter()
-    star_index = luigi.Parameter()
-    bedfile = luigi.Parameter()
-    genome_fa = luigi.Parameter()
-    gtf = luigi.Parameter()
+    analysis = luigi.Parameter(default='basic')
+    species = luigi.Parameter()
+    database = luigi.Parameter(default='ensembl')
+    database_version = luigi.Parameter(default='')
 
     def requires(self):
 
-        ## global paramters
+        # global paramters
         global proj_name, proj_dir, log_dir, clean_dir, sample_inf, result_dir, report_dir
         proj_name = self.proj_name
         proj_dir = self.proj_dir
@@ -255,6 +253,13 @@ class run_pipe(luigi.Task):
             proj_name), 'analysis_report')
         map(circ_mkdir_unix, [log_dir, result_dir, report_dir])
 
+        # get species annotation
+        sp_anno_inf = sepcies_annotation_path()
+        sp_anno_inf.sp_latin = self.species
+        sp_anno_inf.sp_database = self.database
+        sp_anno_inf.sp_db_version = self.database_version
+        sp_anno_inf.get_anno_inf()
+
         # fastqc module
         global fastqc_dir
         fastqc_dir = path.join(proj_dir, 'fastqc')
@@ -262,36 +267,36 @@ class run_pipe(luigi.Task):
         # quant module
         global quant_dir, transcript, gene_tr
         quant_dir = path.join(proj_dir, 'quantification')
-        transcript = self.transcript
-        gene_tr = self.gene_tr
+        transcript = sp_anno_inf.transcript
+        gene_tr = sp_anno_inf.gene_tr
 
         # enrich module
         global enrich_dir, goseq_ano, topgo_ano, gene_len, kegg_abbr, kegg_blast
         enrich_dir = path.join(proj_dir, 'enrichment')
-        goseq_ano = self.goseq_ano
-        topgo_ano = self.topgo_ano
-        gene_len = self.gene_len
-        kegg_abbr = self.kegg_abbr
-        kegg_blast = self.kegg_blast
+        goseq_ano = sp_anno_inf.goseq_ano
+        topgo_ano = sp_anno_inf.topgo_ano
+        gene_len = sp_anno_inf.gene_len
+        kegg_abbr = sp_anno_inf.kegg_abbr
+        kegg_blast = sp_anno_inf.kegg_blast
 
         # star mapping module
         global mapping_dir, star_index
         mapping_dir = path.join(proj_dir, 'mapping')
-        star_index = self.star_index
+        star_index = sp_anno_inf.star_index
 
         # rseqc module
         global rseqc_dir, bedfile
         rseqc_dir = path.join(proj_dir, 'rseqc')
-        bedfile = self.bedfile
+        bedfile = sp_anno_inf.bedfile
 
         # snp module
         global snp_dir, genome_fa
         snp_dir = path.join(proj_dir, 'snp')
-        genome_fa = self.genome_fa
+        genome_fa = sp_anno_inf.genome_fa
 
         # splicing module
         global gtf
-        gtf = self.gtf
+        gtf = sp_anno_inf.gtf
 
         # run pipeline
         global analysis_folders
