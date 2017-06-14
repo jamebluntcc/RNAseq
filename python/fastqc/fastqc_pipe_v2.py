@@ -2,11 +2,6 @@
 
 import luigi
 from os import path
-import sys
-
-script_path = path.dirname(path.abspath(__file__))
-RNAseq_lib_path = path.join(script_path, '..')
-sys.path.insert(0, RNAseq_lib_path)
 from RNAseq_lib import FASTQC_SUMMERY
 from RNAseq_lib import FASTQC
 from RNAseq_lib import GC_PLOT

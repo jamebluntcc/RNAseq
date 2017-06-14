@@ -1,11 +1,6 @@
 import luigi
 from os import path
 from os import system
-import sys
-
-script_path = path.dirname(path.abspath(__file__))
-RNAseq_lib_path = path.join(script_path, '..')
-sys.path.insert(0, RNAseq_lib_path)
 from RNAseq_lib import run_cmd
 from RNAseq_lib import STAR_MAPPING_STATS
 from RNAseq_lib import STAR_MAPPING_STATS_PLOT

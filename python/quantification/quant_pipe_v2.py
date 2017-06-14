@@ -1,13 +1,8 @@
 import luigi
 from os import path
 from os import walk
-import sys
 import pandas as pd
 import itertools
-
-script_path = path.dirname(path.abspath(__file__))
-RNAseq_lib_path = path.join(script_path, '..')
-sys.path.insert(0, RNAseq_lib_path)
 from RNAseq_lib import run_cmd
 from RNAseq_lib import KALLISTO_TO_TABLE
 from RNAseq_lib import DIFF_ANALYSIS
