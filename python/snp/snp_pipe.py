@@ -10,6 +10,7 @@ from RNAseq_lib import run_cmd
 from RNAseq_lib import PICARD_PATH
 from RNAseq_lib import GATK_PATH
 from RNAseq_lib import SNP_PLOT
+from python_tools import write_obj_to_file
 
 GATK_THREAD = '1'
 GATK_NCT = '10'
@@ -265,30 +266,13 @@ class snp_summary(luigi.Task):
 
     def run(self):
 
-        snp_stats_cmd = ['bcftools',
-                         'stats',
-                         '-s',
-                         '-',
-                         '{}/snp.filter.vcf'.format(OutDir),
-                         '>',
-                         '{}/snp.stats'.format(OutDir)]
+        snp_plot_cmds = ['bcftools stats -s - {0}/snp.filter.vcf > {0}/snp.stats'.format(OutDir)]
+        snp_plot_cmds.append('plot-vcfstats -p {0}/snp_plot -s {0}/snp.stats'.format(OutDir))
+        snp_plot_cmds.append('Rscript {0} --snp_stats {1}/snp_plot/tstv_by_sample.0.dat --sample_inf {2} --out_dir {1}'.format(SNP_PLOT, OutDir, SampleInf))
+        snp_plot_cmd_file = path.join(OutDir, 'snp.plot.sh')
+        write_obj_to_file(snp_plot_cmds, snp_plot_cmd_file)
 
-        snp_plot_cmd = ['plot-vcfstats',
-                        '-p',
-                        '{}/snp_plot'.format(OutDir),
-                        '-s',
-                        '{}/snp.stats'.format(OutDir)]
-
-        snp_plot2_cmd = ['Rscript',
-                         SNP_PLOT,
-                         '--snp_stats',
-                         '{}/snp_plot/tstv_by_sample.0.dat'.format(OutDir),
-                         '--sample_inf',
-                         SampleInf,
-                         '--out_dir',
-                         OutDir]
-
-        snp_summary_cmds = [snp_stats_cmd, snp_plot_cmd, snp_plot2_cmd]
+        snp_summary_cmds = ['sh', snp_plot_cmd_file]
         snp_summary_inf = run_cmd(snp_summary_cmds)
         with self.output().open('w') as snp_summary_log:
             snp_summary_log.write(snp_summary_inf)
@@ -317,13 +301,14 @@ class snp_collection(luigi.Task):
 
     def run(self):
 
-        ignore_files = ['.ignore', 'logs', 'bam']
+        ignore_files = ['.ignore', 'logs', 'bam', '*.sh',
+                        'snp.raw.vcf*', 'snp.stats', 'snp_plot']
         with self.output().open('w') as ignore_files_inf:
             for each_file in ignore_files:
                 ignore_files_inf.write('{}\n'.format(each_file))
 
     def output(self):
-        return luigi.LocalTarget('{}/logs/snp_collection.log'.format(self.OutDir))
+        return luigi.LocalTarget('{}/.ignore'.format(self.OutDir))
 
 
 if __name__ == '__main__':

@@ -6,7 +6,6 @@ import sys
 from RNAseq_lib import run_cmd
 from RNAseq_lib import sepcies_annotation_path
 from python_tools import circ_mkdir_unix
-from python_tools import load_fn_to_obj
 
 script_path = path.dirname(path.abspath(__file__))
 fastqc_dir = path.join(script_path, 'fastqc')

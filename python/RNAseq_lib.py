@@ -188,8 +188,9 @@ class sepcies_annotation_path:
         sp_database_dir = sp_database_dirs[0]
         return sp_database_dir
 
-    def get_anno_inf(self):
-        sp_database_dir = self.get_database_dir()
+    def get_anno_inf(self, sp_database_dir = ''):
+        if not sp_database_dir:
+            sp_database_dir = self.get_database_dir()
 
         def get_annotation_path(x): return path.join(
             sp_database_dir, '{0}.{1}'.format(self.sp_latin, x))
