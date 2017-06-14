@@ -1,0 +1,1 @@
+../star_mapping/star_mapping_pipe_v2.py
