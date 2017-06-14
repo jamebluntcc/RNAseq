@@ -2,28 +2,9 @@
 
 import luigi
 from os import path
-import sys
 from RNAseq_lib import run_cmd
 from RNAseq_lib import sepcies_annotation_path
 from python_tools import circ_mkdir_unix
-
-script_path = path.dirname(path.abspath(__file__))
-fastqc_dir = path.join(script_path, 'fastqc')
-quant_dir = path.join(script_path, 'quantification')
-enrich_dir = path.join(script_path, 'enrichment')
-star_mapping_dir = path.join(script_path, 'star_mapping')
-rseqc_dir = path.join(script_path, 'rseqc')
-snp_dir = path.join(script_path, 'snp')
-splicing_dir = path.join(script_path, 'splicing')
-
-sys.path.insert(0, fastqc_dir)
-sys.path.insert(0, quant_dir)
-sys.path.insert(0, enrich_dir)
-sys.path.insert(0, star_mapping_dir)
-sys.path.insert(0, rseqc_dir)
-sys.path.insert(0, snp_dir)
-sys.path.insert(0, splicing_dir)
-
 import fastqc_pipe_v2
 import quant_pipe_v2 as quant_pipe
 import enrich_pipe_v2 as enrich_pipe
@@ -32,6 +13,7 @@ import rseqc_pipe
 import snp_pipe
 import rmats_pipe
 
+script_path = path.dirname(path.abspath(__file__))
 
 class cp_analysis_result(luigi.Task):
 
