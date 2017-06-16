@@ -26,12 +26,16 @@ output_path <- argv$out
 # './enrich/go/N7_vs_N42/' all_lists_path <- './differential_analysis/N7_vs_N42/'
 # output_path <- './enrich/go/N7_vs_N42/'
 #----theme set-----
-enrich_theme <- theme_bw() + theme(legend.key = element_blank(), axis.text.x = element_text(color = "black",
-  face = "bold", angle = 90, hjust = 1, vjust = 0.5, size = rel(0.8)), axis.text.y = element_text(color = "black",
-  face = "bold", size = rel(0.8)), axis.title.y = element_text(color = "black",
-  face = "bold", size = rel(0.8)), panel.grid.minor.x = element_line(colour = "black"),
-  panel.grid.major = element_blank(), strip.text = element_blank(), strip.background = element_blank(),
-  legend.text = element_text(size = rel(0.8)))
+enrich_theme <- theme_bw() +
+  theme(legend.key = element_blank(),
+        axis.text.x = element_text(color = "black", face = "bold", angle = 90, hjust = 1, vjust = 0.5, size = rel(0.8)),
+        axis.text.y = element_text(color = "black", face = "bold", size = rel(0.8)),
+        axis.title.y = element_text(color = "black", face = "bold", size = rel(0.8)),
+        panel.grid.minor.x = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        strip.text = element_blank(),
+        strip.background = element_blank(),
+        legend.text = element_text(size = rel(0.8)))
 theme_set(enrich_theme)
 #-----function-------
 find_count <- function(count_data) {
@@ -164,14 +168,16 @@ if (enrichment_type == "kegg") {
     ]
   kegg_merge_data[dim(kegg_merge_data)[1], c("Input_number", "expected")] <- 0
   kegg_merge_data[dim(kegg_merge_data)[1], "color"] <- "expected"
+  plot = enrich_barplot(kegg_merge_data,
+                        break_label1 = unlist(strsplit(first_level_split[1],split = "_vs_"))[1],
+                        break_label2 = unlist(strsplit(first_level_split[1],split = "_vs_"))[2])
+  plot_width = 2 + dim(kegg_merge_data)[1]/4
+  plot_height = 4 + dim(kegg_merge_data)[1]/10
+
   ggsave(filename = paste(output_path, paste(first_level_split[1], "kegg.enrichment.barplot.pdf",
-    sep = "."), sep = "/"), plot = enrich_barplot(kegg_merge_data, break_label1 = unlist(strsplit(first_level_split[1],
-    split = "_vs_"))[1], break_label2 = unlist(strsplit(first_level_split[1],
-    split = "_vs_"))[2]), height = 9, width = dim(kegg_merge_data)[1]/4)
+    sep = "."), sep = "/"), plot = plot, height = plot_height, width = plot_width)
   ggsave(filename = paste(output_path, paste(first_level_split[1], "kegg.enrichment.barplot.png",
-    sep = "."), sep = "/"), plot = enrich_barplot(kegg_merge_data, break_label1 = unlist(strsplit(first_level_split[1],
-    split = "_vs_"))[1], break_label2 = unlist(strsplit(first_level_split[1],
-    split = "_vs_"))[2]), height = 9, width = dim(kegg_merge_data)[1]/4, type = "cairo-png")
+    sep = "."), sep = "/"), plot = plot, height = plot_height, width = plot_width, type = "cairo-png")
 } else if (enrichment_type == "go") {
   go_all_term_count <- read.delim(all_count_file, sep = ",")
   go_all_term_count <- go_all_term_count[go_all_term_count[, 2] != "", ]
@@ -227,12 +233,15 @@ if (enrichment_type == "kegg") {
     ]
   go_merge_data[dim(go_merge_data)[1], c("Input_number", "expected")] <- 0
   go_merge_data[dim(go_merge_data)[1], "color"] <- "expected"
+  plot = enrich_barplot(go_merge_data,
+                        break_label1 = unlist(strsplit(first_level_split[1], split = "_vs_"))[1],
+                        break_label2 = unlist(strsplit(first_level_split[1], split = "_vs_"))[2])
+
+  plot_width = 2 + dim(go_merge_data)[1]/4
+  plot_height = 4 + dim(go_merge_data)[1]/10
+
   ggsave(filename = paste(output_path, paste(first_level_split[1], "go.enrichment.barplot.pdf",
-    sep = "."), sep = "/"), plot = enrich_barplot(go_merge_data, break_label1 = unlist(strsplit(first_level_split[1],
-    split = "_vs_"))[1], break_label2 = unlist(strsplit(first_level_split[1],
-    split = "_vs_"))[2]), height = 9, width = dim(go_merge_data)[1]/4)
+    sep = "."), sep = "/"), plot = plot, height = plot_height, width = plot_width)
   ggsave(filename = paste(output_path, paste(first_level_split[1], "go.enrichment.barplot.png",
-    sep = "."), sep = "/"), plot = enrich_barplot(go_merge_data, break_label1 = unlist(strsplit(first_level_split[1],
-    split = "_vs_"))[1], break_label2 = unlist(strsplit(first_level_split[1],
-    split = "_vs_"))[2]), height = 9, width = dim(go_merge_data)[1]/4, type = "cairo-png")
+    sep = "."), sep = "/"), plot = plot, height = plot_height, width = plot_width, type = "cairo-png")
 }
