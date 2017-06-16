@@ -119,7 +119,7 @@ if (enrichment_type == "kegg") {
       next
     first_level_split <- unlist(strsplit(each_file, split = "\\."))
     if (unlist(strsplit(first_level_split[1], split = "_vs_"))[1] == unlist(strsplit(first_level_split[2],
-      split = "-"))[1]) {
+      split = "-UP"))[1]) {
       up_file <- each_file
       up_data <- read.delim(paste(enrichment_tables_path, up_file, sep = "/"),
         header = T)
@@ -128,7 +128,7 @@ if (enrichment_type == "kegg") {
       up_data_count_list <- read.delim(paste(all_lists_path, up_file_list,
         sep = "/"), header = F)
     } else if (unlist(strsplit(first_level_split[1], split = "_vs_"))[2] == unlist(strsplit(first_level_split[2],
-      split = "-"))[1]) {
+      split = "-UP"))[1]) {
       down_file <- each_file
       down_data <- read.delim(paste(enrichment_tables_path, down_file, sep = "/"),
         header = T)
@@ -181,7 +181,7 @@ if (enrichment_type == "kegg") {
       next
     first_level_split <- unlist(strsplit(each_file, split = "\\."))
     if (unlist(strsplit(first_level_split[1], split = "_vs_"))[1] == unlist(strsplit(first_level_split[2],
-      split = "-"))[1]) {
+      split = "-UP"))[1]) {
       up_file <- each_file
       up_data <- read.delim(paste(enrichment_tables_path, up_file, sep = "/"),
         header = T, stringsAsFactors = F)
@@ -190,7 +190,7 @@ if (enrichment_type == "kegg") {
       up_data_count_list <- read.delim(paste(all_lists_path, up_file_list,
         sep = "/"), header = F)
     } else if (unlist(strsplit(first_level_split[1], split = "_vs_"))[2] == unlist(strsplit(first_level_split[2],
-      split = "-"))[1]) {
+      split = "-UP"))[1]) {
       down_file <- each_file
       down_data <- read.delim(paste(enrichment_tables_path, down_file, sep = "/"),
         header = T, stringsAsFactors = F)
@@ -210,6 +210,7 @@ if (enrichment_type == "kegg") {
         sep = "/"), header = F)
     }
   }
+
   up_data_term_count <- find_count(up_data_count_list)
   down_data_term_count <- find_count(down_data_count_list)
   all_data_term_count <- find_count(all_data_count_list)
