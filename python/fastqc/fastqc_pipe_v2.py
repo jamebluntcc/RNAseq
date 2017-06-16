@@ -143,7 +143,8 @@ class fastqc_collection(luigi.Task):
     def run(self):
         ignore_files = ['.ignore', 'logs', 'fastqc_results/*zip', '.report_files']
         pdf_report_files_pattern = ['fastqc_general_stats.txt',
-                            'gc_plot/*gc_distribution.line.png', 'reads_quality_plot/*reads_quality.bar.png']
+                                    'gc_plot/*gc_distribution.line.png',
+                                    'reads_quality_plot/*reads_quality.bar.png']
         pdf_report_files = rsync_pattern_to_file(self.OutDir, pdf_report_files_pattern)
         pdf_report_ini = path.join(self.OutDir, '.report_files')
         write_obj_to_file(pdf_report_files, pdf_report_ini)
