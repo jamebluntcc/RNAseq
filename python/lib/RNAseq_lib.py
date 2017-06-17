@@ -195,7 +195,10 @@ class sepcies_annotation_path:
         def get_annotation_path(x): return path.join(
             sp_database_dir, '{0}.{1}'.format(self.sp_latin, x))
         self.kegg_abbr = get_kegg_biomart_id(self.sp_latin)[0]
+        if not self.kegg_abbr:
+            self.kegg_abbr = 'ko'
         self.genome_fa = get_annotation_path('genome.fa')
+        self.geneme_fai = get_annotation_path('genome.fa.fai')
         self.gtf = get_annotation_path('genome.gtf')
         self.bedfile = get_annotation_path('genome.bed')
         self.star_index = path.join(sp_database_dir, 'star_index')
@@ -314,6 +317,13 @@ def txt_to_excel(txt_file, sheet_name='Sheet1'):
     txt_df.to_excel(writer, sheet_name, index=False)
     writer.save()
 
+
+def check_rseqc_condition(genome_fai, longest_chr_size=500000000):
+    genome_fai_df = pd.read_table(genome_fai, header=None)
+    if max(genome_fai_df.loc[:, 1]) > longest_chr_size:
+        return False
+    else:
+        return True
 
 def main():
     pass
