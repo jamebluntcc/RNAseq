@@ -72,7 +72,7 @@ gc_line_plot <- function(plot_data, output) {
 
   gc_plot <- ggplot(plot_data, aes(x = X.Base, y = value, colour = variable)) +
     geom_line() + geom_vline(xintercept = seq_len, linetype = 2) + scale_x_continuous(breaks = seq(from = 0,
-    to = 2 * seq_len, by = 25), labels = seq(from = 0, to = 2 * seq_len, by = 25)) +
+    to = 2 * seq_len, by = seq_len), labels = seq(from = 0, to = 2 * seq_len, by = seq_len)) +
     scale_y_continuous(breaks = seq(0, max_gc, by = 0.1), labels = percent(seq(0,
       max_gc, by = 0.1))) + xlab("Postion") + ylab("Percent(%)") + guides(color = guide_legend(title = "")) +
     theme_Publication() + scale_colour_Publication()
