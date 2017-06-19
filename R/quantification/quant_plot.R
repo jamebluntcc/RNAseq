@@ -7,6 +7,7 @@ suppressMessages(library(reshape2, quietly = T))
 suppressMessages(library(ggplot2, quietly = T))
 suppressMessages(library(stringr, quietly = T))
 suppressMessages(library(yarrr, quietly = T))
+suppressMessages(library(gplots))
 options(bitmapType='cairo')
 
 theme_onmath <- function(base_size = 14){
@@ -324,11 +325,11 @@ om_correlation_plot <- function(plot_data, samples, outdir) {
   nsamples = length(sample_types)
   onmath_color <- c("#386cb0","#fdb462","#7fc97f","#ef3b2c","#662506","#a6cee3","#fb9a99","#984ea3","#ffff33")
   sample_colors <- colorRampPalette(onmath_color)(nsamples)
-  data = log2(data+1)
+  data = log10(data+1)
   data = as.matrix(data)
   sample_cor = cor(data, method='pearson', use='pairwise.complete.obs')
 
-  Group <- my_col[1:length(unique(samples$condition))]
+  Group <- sample_colors[1:length(unique(samples$condition))]
   names(Group) <- unique(samples$condition)
   ann_color = data.frame(
     group = samples$condition
