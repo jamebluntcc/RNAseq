@@ -1,3 +1,5 @@
+#! /usr/bin/python
+
 import luigi
 from os import path
 import pandas as pd
