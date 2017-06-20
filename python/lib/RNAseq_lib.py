@@ -123,6 +123,21 @@ PROJECT_DIR = conf.get(server_name, 'project_dir')
 SWISSPROT_FASTA = conf.get(server_name, 'swissprot_fasta')
 
 
+############
+#  REPORT  #
+############
+
+READS_QUALITY_PLOT = conf.get('pdf', 'reads_quality_plot')
+GC_PLOT = conf.get('pdf', 'gc_plot')
+MAPPING_PLOT = conf.get('pdf', 'mapping_plot')
+INNER_DIS_PLOT = conf.get('pdf', 'inner_dis_plot')
+GENEBODY_COV_PLOT = conf.get('pdf', 'genebody_cov_plot')
+READS_DIS_PLOT = conf.get('pdf', 'reads_dis_plot')
+SAMPLE_COR_PLOT = conf.get('pdf', 'sample_cor_plot')
+VOLCANO_PLOT = conf.get('pdf', 'volcano_plot')
+DIFF_HEATMAP = conf.get('pdf', 'diff_heatmap')
+
+
 Base = declarative_base()
 
 
@@ -188,7 +203,7 @@ class sepcies_annotation_path:
         sp_database_dir = sp_database_dirs[0]
         return sp_database_dir
 
-    def get_anno_inf(self, sp_database_dir = ''):
+    def get_anno_inf(self, sp_database_dir=''):
         if not sp_database_dir:
             sp_database_dir = self.get_database_dir()
 
@@ -291,16 +306,41 @@ def get_enrichment_data(enrichment_dir, plots_num=10):
                              'kegg/{}/*ALL.pathway/*pathview.png'.format(each_compare)])[:10])
     go_enrich_table = glob(
         '{}/go/*/*.ALL.go.enrichment.txt'.format(enrichment_dir))[0]
+    go_enrich_plot = glob(
+        '{}/go/*/*go.enrichment.barplot.png'.format(enrichment_dir))[0]
     go_enrich_table_report = path.join(enrichment_dir, 'report.go.table.txt')
+    go_enrich_plot_report = path.join(
+        enrichment_dir, 'go.enrichment.barplot.png')
+    dag_type = ['CC', 'MF', 'BP']
+    for each_type in dag_type:
+        each_go_dag_plot = glob(
+            '{0}/go/*/DAG/ALL.{1}*png'.format(enrichment_dir, each_type))[0]
+        each_go_dag_report_plot = path.join(
+            enrichment_dir, '{}.GO.DAG.png'.format(each_type))
+        system('cp {0} {1}'.format(each_go_dag_plot, each_go_dag_report_plot))
+    system('cp {0} {1}'.format(go_enrich_plot, go_enrich_plot_report))
     system('cut -f1-7 {0} > {1}'.format(go_enrich_table,
                                         go_enrich_table_report))
     kegg_enrich_table = glob(
         '{}/kegg/*/*.ALL.kegg.enrichment.txt'.format(enrichment_dir))[0]
+    kegg_enrich_plot = glob(
+        '{}/kegg/*/*kegg.enrichment.barplot.png'.format(enrichment_dir))[0]
     kegg_enrich_table_report = path.join(
         enrichment_dir, 'report.kegg.table.txt')
+    kegg_enrich_plot_report = path.join(
+        enrichment_dir, 'kegg.enrichment.barplot.png')
+    kegg_pathway_plot = glob(
+        '{}/kegg/*/*ALL.pathway/*pathview.png'.format(enrichment_dir))[0]
+    kegg_pathway_report_plot = path.join(enrichment_dir, 'kegg.pathview.png')
     system('cut -f1-7 {0} > {1}'.format(kegg_enrich_table,
                                         kegg_enrich_table_report))
-    repor_data = ['report.go.table.txt', 'report.kegg.table.txt']
+    system('cp {0} {1}'.format(kegg_enrich_plot, kegg_enrich_plot_report))
+    system('cp {0} {1}'.format(kegg_pathway_plot, kegg_pathway_report_plot))
+    repor_data = ['report.go.table.txt', 'report.kegg.table.txt',
+                  'go.enrichment.barplot.png', 'kegg.enrichment.barplot.png',
+                  'kegg.pathview.png']
+    go_dag_plots = ['{}.GO.DAG.png'.format(each) for each in dag_type]
+    repor_data.extend(go_dag_plots)
     repor_data.extend(pathway_plots)
     return repor_data
 
@@ -324,6 +364,17 @@ def check_rseqc_condition(genome_fai, longest_chr_size=500000000):
         return False
     else:
         return True
+
+
+def add_prefix_to_filename(file_path, prefix='pdf'):
+    file_name = path.basename(file_path)
+    file_dir = path.dirname(file_path)
+    return path.join(file_dir, '{0}.{1}'.format(prefix, file_name))
+
+
+def resize_plot(ori_plot, resize, out_plot):
+    return ['convert', '-resize', '{0}%'.format(resize), ori_plot, out_plot]
+
 
 def main():
     pass

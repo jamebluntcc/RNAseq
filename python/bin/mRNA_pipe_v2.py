@@ -1,10 +1,21 @@
 #! /usr/bin/python
-
+from __future__ import division
 import luigi
 from os import path
 from RNAseq_lib import run_cmd
 from RNAseq_lib import sepcies_annotation_path
 from RNAseq_lib import check_rseqc_condition
+from RNAseq_lib import READS_QUALITY_PLOT
+from RNAseq_lib import GC_PLOT
+from RNAseq_lib import MAPPING_PLOT
+from RNAseq_lib import INNER_DIS_PLOT
+from RNAseq_lib import GENEBODY_COV_PLOT
+from RNAseq_lib import READS_DIS_PLOT
+from RNAseq_lib import SAMPLE_COR_PLOT
+from RNAseq_lib import VOLCANO_PLOT
+from RNAseq_lib import DIFF_HEATMAP
+from RNAseq_lib import add_prefix_to_filename
+from RNAseq_lib import resize_plot
 from python_tools import circ_mkdir_unix
 import fastqc_pipe_v2
 import quant_pipe_v2 as quant_pipe
@@ -226,6 +237,67 @@ class pdf_report_data(luigi.Task):
         return luigi.LocalTarget('{0}/{1}_report_data_cp.log'.format(log_dir, from_dir_name))
 
 
+class resize_pdf_plot(luigi.Task):
+
+    report_dir = luigi.Parameter()
+
+    def run(self):
+        resize_cmds = []
+        sample_num = len(open(sample_inf).readlines())
+        reads_quality_plot = path.join(self.report_dir, READS_QUALITY_PLOT)
+        gc_plot = path.join(self.report_dir, GC_PLOT)
+        mapping_plot = path.join(self.report_dir, MAPPING_PLOT)
+        inner_dis_plot = path.join(self.report_dir, INNER_DIS_PLOT)
+        genebody_cov_plot = path.join(self.report_dir, GENEBODY_COV_PLOT)
+        reads_dis_plot = path.join(self.report_dir, READS_DIS_PLOT)
+        sample_cor_plot = path.join(self.report_dir, SAMPLE_COR_PLOT)
+        volcano_plot = path.join(self.report_dir, VOLCANO_PLOT)
+        diff_heatmap = path.join(self.report_dir, DIFF_HEATMAP)
+        pdf_reads_quality_plot = add_prefix_to_filename(reads_quality_plot)
+        pdf_gc_plot = add_prefix_to_filename(gc_plot)
+        pdf_mapping_plot = add_prefix_to_filename(mapping_plot)
+        pdf_inner_dis_plot = add_prefix_to_filename(inner_dis_plot)
+        pdf_genebody_cov_plot = add_prefix_to_filename(genebody_cov_plot)
+        pdf_reads_dis_plot = add_prefix_to_filename(reads_dis_plot)
+        pdf_sample_cor_plot = add_prefix_to_filename(sample_cor_plot)
+        pdf_volcano_plot = add_prefix_to_filename(volcano_plot)
+        pdf_diff_heatmap = add_prefix_to_filename(diff_heatmap)
+
+        plot_resize1 = 100 * round(10 / (8 + sample_num / 4), 2)
+        plot_resize2 = 100 * round(6.8 / (8 + sample_num / 10), 2)
+        plot_resize3 = 100 * round(9 / (8 + sample_num / 8), 2)
+        plot_resize4 = 100 * round(7.6 / (6 + sample_num / 5), 2)
+        plot_resize5 = 100 * round(7.6 / (7 + (sample_num - 5) / 5), 2)
+        plot_resize6 = 100 * round(8 / (6 + sample_num / 4), 2)
+        plot_resize7 = 100 * round(3 / (2 + (sample_num - 5) / 3), 2)
+        resize_cmds.append(resize_plot(
+            reads_quality_plot, plot_resize1, pdf_reads_quality_plot))
+        resize_cmds.append(resize_plot(
+            gc_plot, plot_resize1, pdf_gc_plot))
+        resize_cmds.append(resize_plot(
+            mapping_plot, plot_resize2, pdf_mapping_plot))
+        resize_cmds.append(resize_plot(
+            inner_dis_plot, plot_resize1, pdf_inner_dis_plot))
+        resize_cmds.append(resize_plot(genebody_cov_plot,
+                                       plot_resize3, pdf_genebody_cov_plot))
+        resize_cmds.append(resize_plot(
+            reads_dis_plot, plot_resize4, pdf_reads_dis_plot))
+        resize_cmds.append(resize_plot(
+            sample_cor_plot, plot_resize5, pdf_sample_cor_plot))
+        resize_cmds.append(resize_plot(
+            volcano_plot, plot_resize6, pdf_volcano_plot))
+        resize_cmds.append(resize_plot(
+            diff_heatmap, plot_resize7, pdf_diff_heatmap))
+        for each in resize_cmds:
+            print each
+        resize_cmds_inf = run_cmd(resize_cmds)
+        with self.output().open('w') as resize_pdf_plot_log:
+            resize_pdf_plot_log.write(resize_cmds_inf)
+
+    def output(self):
+        return luigi.LocalTarget('{}/resize_pdf_plot.log'.format(log_dir))
+
+
 MODULE_DICT = {
     'fastqc': fastqc,
     'quantification': quant,
@@ -322,7 +394,7 @@ class run_pipe(luigi.Task):
                                  'enrichment', 'splicing', 'snp']
             else:
                 sys.exit('wrong analysis_abbr!')
-        ## check rseqc run condition
+        # check rseqc run condition
         if 'rseqc' in analysis_list and (not check_rseqc_condition(geneme_fai)):
             analysis_list.remove('rseqc')
         analysis_modules, analysis_folders = get_analysis_modules(
@@ -333,6 +405,7 @@ class run_pipe(luigi.Task):
         yield [cp_analysis_result(each_folder, result_dir) for each_folder in analysis_folders]
         pdf_report_data_dir = path.join(report_dir, 'report_data')
         yield [pdf_report_data(each_folder, pdf_report_data_dir) for each_folder in analysis_folders]
+        yield resize_pdf_plot(pdf_report_data_dir)
         with self.output().open('w') as analysis_log:
             analysis_log.write('analysis finished')
 
