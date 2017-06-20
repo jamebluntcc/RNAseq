@@ -18,6 +18,7 @@ class run_pipe:
         self.sample_inf = ''
         self.species = ''
         self.proj_name = ''
+        self.proj_ini = ''
         self.sample_number = 0
 
     def generate_sh(self):
@@ -32,8 +33,10 @@ mRNA_pipe_v2.py run_pipe \\
     --clean-dir {2} \\
     --sample-inf {3} \\
     --species {4} \\
-    --workers {5}
-        '''.format(self.proj_name, self.proj_dir, self.clean_dir, self.sample_inf, self.species, worker_number)
+    --workers {5} \\
+    '''.format(self.proj_name, self.proj_dir, self.clean_dir, self.sample_inf, self.species, worker_number)
+        if path.exists(self.proj_ini):
+            script_inf = '{0}--analysis-file {1} '.format(script_inf, self.proj_ini)
         with open(self.script, 'w') as script_cont:
             script_cont.write(script_inf)
 
@@ -58,4 +61,5 @@ if __name__ == '__main__':
     my_proj.species = proj_name_tmp.split('-')[2]
     my_proj.proj_name = 'OM_mRNA_{}_{}'.format(my_proj.sample_number, my_proj.species)
     my_proj.script = path.join(my_proj.proj_dir, '{}.sh'.format(my_proj.proj_name))
+    my_proj.proj_ini = path.join(my_proj.proj_dir, 'project.ini')
     my_proj.run()

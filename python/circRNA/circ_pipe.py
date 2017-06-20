@@ -98,6 +98,6 @@ if __name__ == '__main__':
     circ_exp_matrix_dir = path.dirname(circ_exp_matrix)
     circ_exp_matrix_name_pre, circ_exp_matrix_name_suf = path.splitext(
         circ_exp_matrix_name)
-    circ_exp_inf_out_path = path.join(circ_exp_matrix_dir, '{0}.ann.{1}'.format(
+    circ_exp_inf_out_path = path.join(circ_exp_matrix_dir, '{0}.ann{1}'.format(
         circ_exp_matrix_name_pre, circ_exp_matrix_name_suf))
     circ_exp_inf_df.to_csv(circ_exp_inf_out_path, sep='\t', index=False)
