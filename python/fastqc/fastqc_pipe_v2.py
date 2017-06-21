@@ -4,7 +4,7 @@ import luigi
 from os import path
 from RNAseq_lib import FASTQC_SUMMERY
 from RNAseq_lib import FASTQC
-from RNAseq_lib import GC_PLOT
+from RNAseq_lib import GC_PLOT_R
 from RNAseq_lib import RQ_PLOT
 from RNAseq_lib import run_cmd
 from RNAseq_lib import rsync_pattern_to_file
@@ -91,7 +91,7 @@ class gc_plot(luigi.Task):
     def run(self):
         gc_dir = path.join(OutDir, 'gc_plot')
         tmp = run_cmd(['Rscript',
-                       GC_PLOT,
+                       GC_PLOT_R,
                        '--gc_dir',
                        gc_dir,
                        '--out_dir',

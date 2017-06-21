@@ -36,6 +36,7 @@ for (i in seq(sample_number)) {
   each_sample_gc_df <- read.delim(gc_files[i])
   each_sample_gc_df[,2:dim(each_sample_gc_df)[2]] <- each_sample_gc_df[,2:dim(each_sample_gc_df)[2]] / 100
   each_sample_gc_df$sample <- group_inf_df$V2[i]
+  each_sample_gc_df[is.na(each_sample_gc_df)] <- 0
   gc_file_list[[i]] <- each_sample_gc_df
   each_sample_out_name <- paste(group_inf_df$V2[i], 'gc_distribution.line', sep = '.')
   each_sample_out_path <- file.path(gc_dir, each_sample_out_name)

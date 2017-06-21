@@ -136,7 +136,7 @@ class run_go_barplot(luigi.Task):
             go_plot_logs.write(tmp)
 
     def output(self):
-        return luigi.LocalTarget('{}/logs/go_barplot.log'.format(OutDir))
+        return luigi.LocalTarget('{0}/logs/{1}_go_barplot.log'.format(OutDir, self.compare))
 
 
 class run_kegg_barplot(luigi.Task):
@@ -169,7 +169,7 @@ class run_kegg_barplot(luigi.Task):
             kegg_plog_logs.write(tmp)
 
     def output(self):
-        return luigi.LocalTarget('{}/logs/kegg_barplot.log'.format(OutDir))
+        return luigi.LocalTarget('{0}/logs/{1}_kegg_barplot.log'.format(OutDir, self.compare))
 
 
 class enrichment_collection(luigi.Task):
