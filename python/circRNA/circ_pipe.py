@@ -2,7 +2,7 @@
 
 '''
 Usage:
-    circ_pipe.py <circ_pred_files> <mbs_pred> <circ_exp_matrix>
+    circ_pipe.py <circ_pred_files> <mbs_pred> <gene_name_des> <circ_exp_matrix>
 
 '''
 
@@ -55,6 +55,7 @@ if __name__ == '__main__':
     circ_pred_files = arguments['<circ_pred_files>']
     mbs_pred = arguments['<mbs_pred>']
     circ_exp_matrix = arguments['<circ_exp_matrix>']
+    gene_name_des = arguments['<gene_name_des>']
 
     all_circ_dict = {}
     circ_pred_file_list = [each.strip() for each in open(circ_pred_files)]
@@ -66,6 +67,7 @@ if __name__ == '__main__':
 
     # get miRNA binding info
     mbs_df = pd.read_table(mbs_pred, header=None, index_col=1)
+    gene_name_des = pd.read_table(gene_name_des, index_col=0)
     for each_circ in mbs_df.index:
         if isinstance(mbs_df.loc[each_circ, 0], str):
             all_circ_dict[each_circ].miRNA = [mbs_df.loc[each_circ, 0]]
@@ -76,11 +78,16 @@ if __name__ == '__main__':
     circRNA_inf_dict = {}
     circ_list = all_circ_dict.keys()
     for each_circ in circ_list:
+        each_circ_gene = all_circ_dict[each_circ].gene
         each_circ_type = all_circ_dict[each_circ].type
         each_circ_miRNAs = all_circ_dict[each_circ].miRNA
         each_circ_miRNA_num = len(each_circ_miRNAs)
         each_circ_miRNA_mbs = len(set(each_circ_miRNAs))
         each_circ_miRNAs = ','.join(set(each_circ_miRNAs))
+        if each_circ_gene in gene_name_des.index:
+            each_circ_gene_name = gene_name_des.loc[each_circ_gene, 'gene_name']
+        else:
+            each_circ_gene_name = '--'
         if not each_circ_miRNAs:
             each_circ_miRNAs = '--'
         circRNA_inf_dict.setdefault('circRNA_type', []).append(each_circ_type)
@@ -89,6 +96,8 @@ if __name__ == '__main__':
         circRNA_inf_dict.setdefault(
             'miRNA_binding_site_number', []).append(each_circ_miRNA_mbs)
         circRNA_inf_dict.setdefault('miRNA_ids', []).append(each_circ_miRNAs)
+        circRNA_inf_dict.setdefault(
+            'gene_name', []).append(each_circ_gene_name)
     circRNA_inf_dict['circRNA_id'] = circ_list
     circRNA_inf_df = pd.DataFrame(circRNA_inf_dict)
     circ_exp_df = pd.read_table(circ_exp_matrix)
