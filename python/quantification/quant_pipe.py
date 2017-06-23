@@ -109,7 +109,8 @@ class quant_collection(luigi.Task):
 
     def run(self):
         ignore_files = ['.ignore', 'logs', 'kallisto/*/run_info.json']
-        pdf_report_files = ['Gene_expression.png', 'Sample.correlation.heatmap.png', 'PCA_plot.png', 'Diff.genes.heatmap.png']
+        pdf_report_files = ['Gene_expression.png', 'Sample.correlation.heatmap.png',
+                            'PCA_plot.png', 'Diff.genes.heatmap.png']
         pdf_report_ini = path.join(self.OutDir, '.pdf_files')
         rsync_pattern_to_file(pdf_report_files, pdf_report_ini)
         with self.output().open('w') as ignore_inf:

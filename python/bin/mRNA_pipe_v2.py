@@ -1,9 +1,11 @@
 #! /usr/bin/python
-
+from __future__ import division
 import luigi
 from os import path
 from RNAseq_lib import run_cmd
 from RNAseq_lib import sepcies_annotation_path
+from RNAseq_lib import check_rseqc_condition
+from RNAseq_lib import resize_report_plot
 from python_tools import circ_mkdir_unix
 import fastqc_pipe_v2
 import quant_pipe_v2 as quant_pipe
@@ -12,8 +14,10 @@ import star_mapping_pipe_v2
 import rseqc_pipe
 import snp_pipe
 import rmats_pipe
+import sys
 
 script_path = path.dirname(path.abspath(__file__))
+
 
 class cp_analysis_result(luigi.Task):
 
@@ -41,8 +45,12 @@ class cp_analysis_result(luigi.Task):
 
 class fastqc(luigi.Task):
 
+    proj_dir = luigi.Parameter()
+    dir_name = 'fastqc'
+
     def requires(self):
-        return fastqc_pipe_v2.fastqc_collection(OutDir=fastqc_dir, SampleInf=sample_inf, CleanDir=clean_dir)
+        out_dir = path.join(self.proj_dir, self.dir_name)
+        return fastqc_pipe_v2.fastqc_collection(OutDir=out_dir, SampleInf=sample_inf, CleanDir=clean_dir)
 
     def run(self):
         with self.output().open('w') as fastqc_log_inf:
@@ -54,8 +62,12 @@ class fastqc(luigi.Task):
 
 class quant(luigi.Task):
 
+    proj_dir = luigi.Parameter()
+    dir_name = 'quantification'
+
     def requires(self):
-        return quant_pipe.quant_collection(OutDir=quant_dir, SampleInf=sample_inf, CleanDir=clean_dir, Transcript=transcript, Gene2Tr=gene_tr)
+        out_dir = path.join(self.proj_dir, self.dir_name)
+        return quant_pipe.quant_collection(OutDir=out_dir, SampleInf=sample_inf, CleanDir=clean_dir, Transcript=transcript, Gene2Tr=gene_tr)
 
     def run(self):
         with self.output().open('w') as quant_log_inf:
@@ -67,8 +79,12 @@ class quant(luigi.Task):
 
 class mapping(luigi.Task):
 
+    proj_dir = luigi.Parameter()
+    dir_name = 'mapping'
+
     def requires(self):
-        return star_mapping_pipe_v2.star_mapping_collection(OutDir=mapping_dir, IndexDir=star_index, SampleInf=sample_inf, CleanDir=clean_dir)
+        out_dir = path.join(self.proj_dir, self.dir_name)
+        return star_mapping_pipe_v2.star_mapping_collection(OutDir=out_dir, IndexDir=star_index, SampleInf=sample_inf, CleanDir=clean_dir)
 
     def run(self):
         with self.output().open('w') as mapping_log_inf:
@@ -80,11 +96,16 @@ class mapping(luigi.Task):
 
 class enrich(luigi.Task):
 
+    proj_dir = luigi.Parameter()
+    dir_name = 'enrichment'
+
     def requires(self):
-        return quant()
+        return quant(proj_dir=self.proj_dir)
 
     def run(self):
-        yield enrich_pipe.enrichment_collection(QuantDir=quant_dir, OutDir=enrich_dir, GoseqAnno=goseq_ano, TopgoAnno=topgo_ano, GeneLen=gene_len, KEGGAbbr=kegg_abbr, KEGGBlast=kegg_blast, ReRun='no')
+        out_dir = path.join(self.proj_dir, self.dir_name)
+        quant_dir = path.join(self.proj_dir, 'quantification')
+        yield enrich_pipe.enrichment_collection(QuantDir=quant_dir, OutDir=out_dir, GoseqAnno=goseq_ano, TopgoAnno=topgo_ano, GeneLen=gene_len, KEGGAbbr=kegg_abbr, KEGGBackground=kegg_bg, KEGGBlast=kegg_blast, ReRun='no')
         with self.output().open('w') as enrich_log_inf:
             enrich_log_inf.write('enrichment finished!')
 
@@ -94,12 +115,16 @@ class enrich(luigi.Task):
 
 class rseqc(luigi.Task):
 
+    proj_dir = luigi.Parameter()
+    dir_name = 'rseqc'
+
     def requires(self):
-        return mapping()
+        return mapping(proj_dir=self.proj_dir)
 
     def run(self):
-        bam_dir = path.join(mapping_dir, 'bam_dir')
-        yield rseqc_pipe.rseqc_collection(OutDir=rseqc_dir, SampleInf=sample_inf, BamDir=bam_dir, BedFile=bedfile)
+        bam_dir = path.join(self.proj_dir, 'mapping', 'bam_dir')
+        out_dir = path.join(self.proj_dir, self.dir_name)
+        yield rseqc_pipe.rseqc_collection(OutDir=out_dir, SampleInf=sample_inf, BamDir=bam_dir, BedFile=bedfile)
         with self.output().open('w') as rseqc_log_inf:
             rseqc_log_inf.write('rseqc finished!')
 
@@ -109,12 +134,16 @@ class rseqc(luigi.Task):
 
 class snp(luigi.Task):
 
+    proj_dir = luigi.Parameter()
+    dir_name = 'rseqc'
+
     def requires(self):
-        return mapping()
+        return mapping(proj_dir=self.proj_dir)
 
     def run(self):
-        bam_dir = path.join(mapping_dir, 'bam_dir')
-        yield snp_pipe.snp_collection(OutDir=snp_dir, SampleInf=sample_inf, BamDir=bam_dir, Ref=genome_fa)
+        bam_dir = path.join(self.proj_dir, 'mapping', 'bam_dir')
+        out_dir = path.join(self.proj_dir, self.dir_name)
+        yield snp_pipe.snp_collection(OutDir=out_dir, SampleInf=sample_inf, BamDir=bam_dir, Ref=genome_fa)
 
         with self.output().open('w') as snp_log_inf:
             snp_log_inf.write('snp finished!')
@@ -125,12 +154,16 @@ class snp(luigi.Task):
 
 class splicing(luigi.Task):
 
+    proj_dir = luigi.Parameter()
+    dir_name = 'splicing'
+
     def requires(self):
-        return mapping()
+        return mapping(proj_dir=self.proj_dir)
 
     def run(self):
-        bam_dir = path.join(mapping_dir, 'bam_dir')
-        yield rmats_pipe.rmats_collection(OutDir=snp_dir, SampleInf=sample_inf, BamDir=bam_dir, Gtf=gtf)
+        bam_dir = path.join(self.proj_dir, 'mapping', 'bam_dir')
+        out_dir = path.join(self.proj_dir, self.dir_name)
+        yield rmats_pipe.rmats_collection(OutDir=out_dir, SampleInf=sample_inf, BamDir=bam_dir, Gtf=gtf)
 
         with self.output().open('w') as splicing_log_inf:
             splicing_log_inf.write('splicing finished!')
@@ -141,15 +174,17 @@ class splicing(luigi.Task):
 
 class release_analysis_data(luigi.Task):
 
+    proj_dir = luigi.Parameter()
+
     def requires(self):
 
-        return mapping()
+        return mapping(proj_dir=self.proj_dir)
 
     def run(self):
 
-        analysis_bam_dir = path.join(mapping_dir, 'bam_dir')
+        analysis_bam_dir = path.join(self.proj_dir, 'mapping', 'bam_dir')
         out_data_dir = path.join(
-            proj_dir, '{}_analysis_data'.format(proj_name))
+            self.proj_dir, '{}_analysis_data'.format(proj_name))
         out_bam_dir = path.join(out_data_dir, 'bam')
         fq_dir = path.join(out_data_dir, 'fq')
 
@@ -187,12 +222,6 @@ class pdf_report_data(luigi.Task):
             cp_cmd_inf = 'nothing for report in {}'.format(from_dir_name)
         else:
             circ_mkdir_unix(to_dir)
-            # report_files_list = load_fn_to_obj(report_files_ini)
-        #     cp_cmd_list = []
-        #     for each_file in report_files_list:
-        #         each_file_path = path.join(self.from_dir, each_file)
-        #         cp_cmd_list.append(['cp {0} {1}'.format(each_file_path, to_dir)])
-        #     cp_cmd_inf = run_cmd(cp_cmd_list, True)
             cp_cmd = ['rsync',
                       '-av',
                       '--files-from={}'.format(report_files_ini),
@@ -207,6 +236,41 @@ class pdf_report_data(luigi.Task):
         return luigi.LocalTarget('{0}/{1}_report_data_cp.log'.format(log_dir, from_dir_name))
 
 
+class resize_pdf_plot(luigi.Task):
+
+    report_dir = luigi.Parameter()
+
+    def run(self):
+        resize_cmds_inf = resize_report_plot(self.report_dir)
+        with self.output().open('w') as resize_pdf_plot_log:
+            resize_pdf_plot_log.write(resize_cmds_inf)
+
+    def output(self):
+        return luigi.LocalTarget('{}/resize_pdf_plot.log'.format(log_dir))
+
+
+MODULE_DICT = {
+    'fastqc': fastqc,
+    'quantification': quant,
+    'mapping': mapping,
+    'enrichment': enrich,
+    'rseqc': rseqc,
+    'snp': snp,
+    'splicing': splicing
+}
+
+
+def get_analysis_modules(module_name_list, proj_dir):
+    module_list = []
+    module_dirs = []
+    for each_name in module_name_list:
+        each_module = MODULE_DICT[each_name](proj_dir=proj_dir)
+        each_module_dir = path.join(proj_dir, each_name)
+        module_list.append(each_module)
+        module_dirs.append(each_module_dir)
+    return module_list, module_dirs
+
+
 class run_pipe(luigi.Task):
 
     # read parameter
@@ -214,8 +278,10 @@ class run_pipe(luigi.Task):
     proj_dir = luigi.Parameter()
     clean_dir = luigi.Parameter()
     sample_inf = luigi.Parameter()
-    analysis = luigi.Parameter(default='basic')
+    analysis_abbr = luigi.Parameter(default='basic')
+    analysis_file = luigi.Parameter(default="")
     species = luigi.Parameter()
+    kegg_bg = luigi.Parameter(default='')
     database = luigi.Parameter(default='ensembl')
     database_version = luigi.Parameter(default='')
 
@@ -241,60 +307,56 @@ class run_pipe(luigi.Task):
         sp_anno_inf.sp_db_version = self.database_version
         sp_anno_inf.get_anno_inf()
 
-        # fastqc module
-        global fastqc_dir
-        fastqc_dir = path.join(proj_dir, 'fastqc')
-
-        # quant module
-        global quant_dir, transcript, gene_tr
-        quant_dir = path.join(proj_dir, 'quantification')
+        # get species annotation files
+        global transcript, gene_tr, star_index, bedfile, genome_fa, gtf
         transcript = sp_anno_inf.transcript
         gene_tr = sp_anno_inf.gene_tr
+        star_index = sp_anno_inf.star_index
+        bedfile = sp_anno_inf.bedfile
+        genome_fa = sp_anno_inf.genome_fa
+        geneme_fai = sp_anno_inf.geneme_fai
+        gtf = sp_anno_inf.gtf
 
-        # enrich module
-        global enrich_dir, goseq_ano, topgo_ano, gene_len, kegg_abbr, kegg_blast
-        enrich_dir = path.join(proj_dir, 'enrichment')
+        # enrich module annotation files
+        global goseq_ano, topgo_ano, gene_len, kegg_abbr, kegg_bg, kegg_blast
         goseq_ano = sp_anno_inf.goseq_ano
         topgo_ano = sp_anno_inf.topgo_ano
         gene_len = sp_anno_inf.gene_len
         kegg_abbr = sp_anno_inf.kegg_abbr
+        kegg_bg = self.kegg_bg
+        if kegg_abbr == 'ko':
+            if not kegg_bg:
+                sys.exit('when kegg abbr is ko, kegg-bg is required!')
+        else:
+            kegg_bg = kegg_abbr
         kegg_blast = sp_anno_inf.kegg_blast
-
-        # star mapping module
-        global mapping_dir, star_index
-        mapping_dir = path.join(proj_dir, 'mapping')
-        star_index = sp_anno_inf.star_index
-
-        # rseqc module
-        global rseqc_dir, bedfile
-        rseqc_dir = path.join(proj_dir, 'rseqc')
-        bedfile = sp_anno_inf.bedfile
-
-        # snp module
-        global snp_dir, genome_fa
-        snp_dir = path.join(proj_dir, 'snp')
-        genome_fa = sp_anno_inf.genome_fa
-
-        # splicing module
-        global gtf
-        gtf = sp_anno_inf.gtf
 
         # run pipeline
         global analysis_folders
-        analysis_folders = []
-        if self.analysis == 'basic':
-            analysis_folders = [fastqc_dir, quant_dir,
-                                enrich_dir, mapping_dir, rseqc_dir]
-            return [fastqc(), rseqc(), enrich(), release_analysis_data()]
-        elif self.analysis == 'advanced':
-            analysis_folders = [fastqc_dir, quant_dir,
-                                enrich_dir, mapping_dir, rseqc_dir]
-            return [fastqc(), rseqc(), enrich(), snp(), release_analysis_data()]
+        if self.analysis_file:
+            analysis_list = [each.strip() for each in open(self.analysis_file)]
+        else:
+            if self.analysis_abbr == 'basic':
+                analysis_list = ['fastqc', 'mapping',
+                                 'rseqc', 'quantification', 'enrichment']
+            elif self.analysis_abbr == 'advanced':
+                analysis_list = ['fastqc', 'mapping',
+                                 'rseqc', 'quantification',
+                                 'enrichment', 'splicing', 'snp']
+            else:
+                sys.exit('wrong analysis_abbr!')
+        # check rseqc run condition
+        if 'rseqc' in analysis_list and (not check_rseqc_condition(geneme_fai)):
+            analysis_list.remove('rseqc')
+        analysis_modules, analysis_folders = get_analysis_modules(
+            analysis_list, proj_dir)
+        return analysis_modules
 
     def run(self):
         yield [cp_analysis_result(each_folder, result_dir) for each_folder in analysis_folders]
         pdf_report_data_dir = path.join(report_dir, 'report_data')
         yield [pdf_report_data(each_folder, pdf_report_data_dir) for each_folder in analysis_folders]
+        yield resize_pdf_plot(pdf_report_data_dir)
         with self.output().open('w') as analysis_log:
             analysis_log.write('analysis finished')
 

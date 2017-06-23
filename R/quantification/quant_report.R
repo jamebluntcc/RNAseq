@@ -1,6 +1,7 @@
 suppressMessages(library(argparser))
 suppressMessages(library(plyr))
 suppressMessages(library(dplyr))
+suppressMessages(library(data.table))
 source('/public/scripts/RNAseq/R/quantification/quant_plot.R')
 
 p <- arg_parser("for expression analysis report plot")
@@ -9,6 +10,8 @@ p <- add_argument(p, '--sample_inf', help = 'sample information with sample name
 p <- add_argument(p, '--qvalue',     help = 'diff gene qvalue cutoff', default = 0.05)
 p <- add_argument(p, '--logfc',      help = 'diff gene logfc cutoff',  default = 1)
 argv <- parse_args(p)
+
+MERGED_VOL_PLOT_NUM = 6
 
 # for test
 # setwd('C:\\work\\pipe\\quantification')
@@ -30,17 +33,24 @@ exp_dir <- file.path(quant_dir, 'expression_summary/')
 
 
 diff_df_list = list()
+plot_number = min(c(16, dim(all_combine)[2]))
+
+diff_genes <- c()
 for (i in seq(dim(all_combine)[2])) {
 
   each_pair <- all_combine[,i]
   each_compare <- paste(each_pair[1], '_vs_', each_pair[2], sep = '')
   each_compare_name = paste(each_compare, 'edgeR.DE_results.txt', sep = '.')
   each_compare_file = file.path(diff_dir, each_compare, each_compare_name)
-  each_compare_df <- read.delim(each_compare_file, check.names = F)
+  each_compare_df <- fread(each_compare_file)
   each_compare_plot <- each_compare_df[, c('Gene_ID', 'logFC', 'FDR')]
   each_compare_plot$compare <- each_compare
-  diff_df_list[[i]] <- each_compare_plot
-
+  each_compare_diff_df <- filter(each_compare_df, abs(logFC) >= logfc, FDR <= qvalue)
+  each_diff_genes <- each_compare_diff_df$Gene_ID
+  diff_genes <- c(diff_genes, each_diff_genes)
+  if (i <= MERGED_VOL_PLOT_NUM) {
+    diff_df_list[[i]] <- each_compare_plot
+  }
 }
 
 diff_df <- ldply(diff_df_list, data.frame)
@@ -52,8 +62,7 @@ pdf_example_diff_df <- each_compare_df[1:100, c('Gene_ID', 'logFC', 'PValue', 'F
 write.table(pdf_example_diff_df, file=pdf_example_diff_out, sep='\t', quote=F, row.names=F)
 write.table(each_compare_df, file=html_example_diff_out, sep='\t', quote=F, row.names=F)
 
-diff_exp_df <- filter(diff_df, abs(logFC) >= logfc, FDR <= qvalue)
-diff_gene_id <- unique(diff_exp_df$Gene_ID)
+diff_gene_id <- unique(diff_genes)
 gene_count_matrix <- file.path(exp_dir, 'Gene.count.txt')
 gene_tpm_matrix <- file.path(exp_dir, 'Gene.tpm.txt')
 gene_count_matrix_df <- read.delim(gene_count_matrix, check.names = F)
