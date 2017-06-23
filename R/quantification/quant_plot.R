@@ -286,17 +286,21 @@ om_pca_plot <- function(plot_data, samples, outdir) {
 }
 
 om_correlation_plot <- function(plot_data, samples, outdir) {
-  data = plot_data
-  sample_types = as.character(unique(samples$condition))
-  rep_names = as.character(samples$sample)
-  data = data[, colnames(data) %in% samples$sample, drop = F]
-  nsamples = length(sample_types)
+  data <- plot_data
+  sample_types <- as.character(unique(samples$condition))
+  rep_names <- as.character(samples$sample)
+  data <- data[, colnames(data) %in% samples$sample, drop = F]
+  nsamples <- length(sample_types)
   onmath_color <- c("#386cb0", "#fdb462", "#7fc97f", "#ef3b2c", "#662506", "#a6cee3",
     "#fb9a99", "#984ea3", "#ffff33")
   sample_colors <- colorRampPalette(onmath_color)(nsamples)
-  data = log10(data + 1)
-  data = as.matrix(data)
-  sample_cor = cor(data, method = "pearson", use = "pairwise.complete.obs")
+  data <- log10(data + 1)
+  data <- as.matrix(data)
+  sample_cor <- cor(data, method = "pearson", use = "pairwise.complete.obs")
+  sample_cor_df <- as.data.frame(sample_cor)
+  sample_cor_df <- cbind(Sample = rownames(sample_cor_df), sample_cor_df)
+  write.table(sample_cor_df, file = paste(outdir, "Sample.correlation.stat.txt", 
+    sep = "/"), quote = F, sep = "\t", row.names = F)
 
   Group <- sample_colors[1:length(unique(samples$condition))]
   names(Group) <- unique(samples$condition)
