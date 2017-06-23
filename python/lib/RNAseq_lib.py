@@ -1,3 +1,4 @@
+from __future__ import division
 import socket
 import sys
 import subprocess
@@ -14,6 +15,7 @@ from sqlalchemy import Column, Integer, String, Sequence, DateTime
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import and_
+from PIL import Image
 import datetime
 
 
@@ -67,7 +69,7 @@ FASTQC_SUMMERY = conf.get(server_name, 'fastqc_data_info')
 
 # G
 GET_AS_SUMMARY_PLOT_DATA = conf.get(server_name, 'get_as_summary_plot_data')
-GC_PLOT = conf.get(server_name, 'gc_plot')
+GC_PLOT_R = conf.get(server_name, 'gc_plot_r')
 GO_ANALYSIS_R = conf.get(server_name, 'go_analysis_r')
 GO_ANNO = conf.get(server_name, 'go_anno')
 
@@ -122,21 +124,11 @@ PROJECT_DIR = conf.get(server_name, 'project_dir')
 # S
 SWISSPROT_FASTA = conf.get(server_name, 'swissprot_fasta')
 
-
 ############
-#  REPORT  #
+#  CONFIG  #
 ############
 
-READS_QUALITY_PLOT = conf.get('pdf', 'reads_quality_plot')
-GC_PLOT = conf.get('pdf', 'gc_plot')
-MAPPING_PLOT = conf.get('pdf', 'mapping_plot')
-INNER_DIS_PLOT = conf.get('pdf', 'inner_dis_plot')
-GENEBODY_COV_PLOT = conf.get('pdf', 'genebody_cov_plot')
-READS_DIS_PLOT = conf.get('pdf', 'reads_dis_plot')
-SAMPLE_COR_PLOT = conf.get('pdf', 'sample_cor_plot')
-VOLCANO_PLOT = conf.get('pdf', 'volcano_plot')
-DIFF_HEATMAP = conf.get('pdf', 'diff_heatmap')
-
+REPORT_CFG = conf.get(server_name, 'report_cfg')
 
 Base = declarative_base()
 
@@ -366,14 +358,43 @@ def check_rseqc_condition(genome_fai, longest_chr_size=500000000):
         return True
 
 
-def add_prefix_to_filename(file_path, prefix='pdf'):
+def add_prefix_to_filename(file_path, add_inf='pdf'):
     file_name = path.basename(file_path)
     file_dir = path.dirname(file_path)
-    return path.join(file_dir, '{0}.{1}'.format(prefix, file_name))
+    file_prefix, file_sufix = path.splitext(file_name)
+    return path.join(file_dir, '{0}.{1}{2}'.format(file_prefix, add_inf, file_sufix))
 
 
-def resize_plot(ori_plot, resize, out_plot):
-    return ['convert', '-resize', '{0}%'.format(resize), ori_plot, out_plot]
+# def resize_plot(ori_plot, resize, out_plot):
+#     return ['convert', '-resize', '{0}%'.format(resize), ori_plot, out_plot]
+
+def plot_resize(ori_size, target_size):
+    factor_size1 = round(target_size[0] / ori_size[0], 2)
+    factor_size2 = round(target_size[1] / ori_size[1], 2)
+    factor_size = min(factor_size1, factor_size2)
+    return [int(each * factor_size) for each in ori_size]
+
+
+def resize_report_plot(report_dir):
+    config = ConfigParser()
+    config.read(REPORT_CFG)
+    items = config.items('pdf_path')
+
+    for value in items:
+        item_name = value[0]
+        item_value = value[1]
+        each_plot_path = path.join(report_dir, item_value)
+        if path.exists(each_plot_path):
+            each_plot_resize_path = add_prefix_to_filename(each_plot_path)
+            each_plot_img = Image.open(each_plot_path)
+            each_plot_img_size = each_plot_img.size
+            each_plot_pdf_size = config.get('pdf_size', item_name)
+            each_plot_pdf_size = [int(each)
+                                  for each in each_plot_pdf_size.split(',')]
+            new_size = plot_resize(each_plot_img_size, each_plot_pdf_size)
+            each_plot_img.resize(new_size).save(each_plot_resize_path)
+
+    return 'finished resize plot'
 
 
 def main():

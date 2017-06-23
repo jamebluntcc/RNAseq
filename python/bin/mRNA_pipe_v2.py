@@ -5,17 +5,7 @@ from os import path
 from RNAseq_lib import run_cmd
 from RNAseq_lib import sepcies_annotation_path
 from RNAseq_lib import check_rseqc_condition
-from RNAseq_lib import READS_QUALITY_PLOT
-from RNAseq_lib import GC_PLOT
-from RNAseq_lib import MAPPING_PLOT
-from RNAseq_lib import INNER_DIS_PLOT
-from RNAseq_lib import GENEBODY_COV_PLOT
-from RNAseq_lib import READS_DIS_PLOT
-from RNAseq_lib import SAMPLE_COR_PLOT
-from RNAseq_lib import VOLCANO_PLOT
-from RNAseq_lib import DIFF_HEATMAP
-from RNAseq_lib import add_prefix_to_filename
-from RNAseq_lib import resize_plot
+from RNAseq_lib import resize_report_plot
 from python_tools import circ_mkdir_unix
 import fastqc_pipe_v2
 import quant_pipe_v2 as quant_pipe
@@ -55,10 +45,11 @@ class cp_analysis_result(luigi.Task):
 
 class fastqc(luigi.Task):
 
+    proj_dir = luigi.Parameter()
     dir_name = 'fastqc'
 
     def requires(self):
-        out_dir = path.join(proj_dir, self.dir_name)
+        out_dir = path.join(self.proj_dir, self.dir_name)
         return fastqc_pipe_v2.fastqc_collection(OutDir=out_dir, SampleInf=sample_inf, CleanDir=clean_dir)
 
     def run(self):
@@ -71,10 +62,11 @@ class fastqc(luigi.Task):
 
 class quant(luigi.Task):
 
+    proj_dir = luigi.Parameter()
     dir_name = 'quantification'
 
     def requires(self):
-        out_dir = path.join(proj_dir, self.dir_name)
+        out_dir = path.join(self.proj_dir, self.dir_name)
         return quant_pipe.quant_collection(OutDir=out_dir, SampleInf=sample_inf, CleanDir=clean_dir, Transcript=transcript, Gene2Tr=gene_tr)
 
     def run(self):
@@ -87,10 +79,11 @@ class quant(luigi.Task):
 
 class mapping(luigi.Task):
 
+    proj_dir = luigi.Parameter()
     dir_name = 'mapping'
 
     def requires(self):
-        out_dir = path.join(proj_dir, self.dir_name)
+        out_dir = path.join(self.proj_dir, self.dir_name)
         return star_mapping_pipe_v2.star_mapping_collection(OutDir=out_dir, IndexDir=star_index, SampleInf=sample_inf, CleanDir=clean_dir)
 
     def run(self):
@@ -103,14 +96,15 @@ class mapping(luigi.Task):
 
 class enrich(luigi.Task):
 
+    proj_dir = luigi.Parameter()
     dir_name = 'enrichment'
 
     def requires(self):
-        return quant()
+        return quant(proj_dir=self.proj_dir)
 
     def run(self):
-        out_dir = path.join(proj_dir, self.dir_name)
-        quant_dir = path.join(proj_dir, 'quantification')
+        out_dir = path.join(self.proj_dir, self.dir_name)
+        quant_dir = path.join(self.proj_dir, 'quantification')
         yield enrich_pipe.enrichment_collection(QuantDir=quant_dir, OutDir=out_dir, GoseqAnno=goseq_ano, TopgoAnno=topgo_ano, GeneLen=gene_len, KEGGAbbr=kegg_abbr, KEGGBackground=kegg_bg, KEGGBlast=kegg_blast, ReRun='no')
         with self.output().open('w') as enrich_log_inf:
             enrich_log_inf.write('enrichment finished!')
@@ -121,14 +115,15 @@ class enrich(luigi.Task):
 
 class rseqc(luigi.Task):
 
+    proj_dir = luigi.Parameter()
     dir_name = 'rseqc'
 
     def requires(self):
-        return mapping()
+        return mapping(proj_dir=self.proj_dir)
 
     def run(self):
-        bam_dir = path.join(proj_dir, 'mapping', 'bam_dir')
-        out_dir = path.join(proj_dir, self.dir_name)
+        bam_dir = path.join(self.proj_dir, 'mapping', 'bam_dir')
+        out_dir = path.join(self.proj_dir, self.dir_name)
         yield rseqc_pipe.rseqc_collection(OutDir=out_dir, SampleInf=sample_inf, BamDir=bam_dir, BedFile=bedfile)
         with self.output().open('w') as rseqc_log_inf:
             rseqc_log_inf.write('rseqc finished!')
@@ -139,14 +134,15 @@ class rseqc(luigi.Task):
 
 class snp(luigi.Task):
 
+    proj_dir = luigi.Parameter()
     dir_name = 'rseqc'
 
     def requires(self):
-        return mapping()
+        return mapping(proj_dir=self.proj_dir)
 
     def run(self):
-        bam_dir = path.join(proj_dir, 'mapping', 'bam_dir')
-        out_dir = path.join(proj_dir, self.dir_name)
+        bam_dir = path.join(self.proj_dir, 'mapping', 'bam_dir')
+        out_dir = path.join(self.proj_dir, self.dir_name)
         yield snp_pipe.snp_collection(OutDir=out_dir, SampleInf=sample_inf, BamDir=bam_dir, Ref=genome_fa)
 
         with self.output().open('w') as snp_log_inf:
@@ -158,14 +154,15 @@ class snp(luigi.Task):
 
 class splicing(luigi.Task):
 
+    proj_dir = luigi.Parameter()
     dir_name = 'splicing'
 
     def requires(self):
-        return mapping()
+        return mapping(proj_dir=self.proj_dir)
 
     def run(self):
-        bam_dir = path.join(proj_dir, 'mapping', 'bam_dir')
-        out_dir = path.join(proj_dir, self.dir_name)
+        bam_dir = path.join(self.proj_dir, 'mapping', 'bam_dir')
+        out_dir = path.join(self.proj_dir, self.dir_name)
         yield rmats_pipe.rmats_collection(OutDir=out_dir, SampleInf=sample_inf, BamDir=bam_dir, Gtf=gtf)
 
         with self.output().open('w') as splicing_log_inf:
@@ -177,15 +174,17 @@ class splicing(luigi.Task):
 
 class release_analysis_data(luigi.Task):
 
+    proj_dir = luigi.Parameter()
+
     def requires(self):
 
-        return mapping()
+        return mapping(proj_dir=self.proj_dir)
 
     def run(self):
 
-        analysis_bam_dir = path.join(proj_dir, 'mapping', 'bam_dir')
+        analysis_bam_dir = path.join(self.proj_dir, 'mapping', 'bam_dir')
         out_data_dir = path.join(
-            proj_dir, '{}_analysis_data'.format(proj_name))
+            self.proj_dir, '{}_analysis_data'.format(proj_name))
         out_bam_dir = path.join(out_data_dir, 'bam')
         fq_dir = path.join(out_data_dir, 'fq')
 
@@ -242,55 +241,7 @@ class resize_pdf_plot(luigi.Task):
     report_dir = luigi.Parameter()
 
     def run(self):
-        resize_cmds = []
-        sample_num = len(open(sample_inf).readlines())
-        reads_quality_plot = path.join(self.report_dir, READS_QUALITY_PLOT)
-        gc_plot = path.join(self.report_dir, GC_PLOT)
-        mapping_plot = path.join(self.report_dir, MAPPING_PLOT)
-        inner_dis_plot = path.join(self.report_dir, INNER_DIS_PLOT)
-        genebody_cov_plot = path.join(self.report_dir, GENEBODY_COV_PLOT)
-        reads_dis_plot = path.join(self.report_dir, READS_DIS_PLOT)
-        sample_cor_plot = path.join(self.report_dir, SAMPLE_COR_PLOT)
-        volcano_plot = path.join(self.report_dir, VOLCANO_PLOT)
-        diff_heatmap = path.join(self.report_dir, DIFF_HEATMAP)
-        pdf_reads_quality_plot = add_prefix_to_filename(reads_quality_plot)
-        pdf_gc_plot = add_prefix_to_filename(gc_plot)
-        pdf_mapping_plot = add_prefix_to_filename(mapping_plot)
-        pdf_inner_dis_plot = add_prefix_to_filename(inner_dis_plot)
-        pdf_genebody_cov_plot = add_prefix_to_filename(genebody_cov_plot)
-        pdf_reads_dis_plot = add_prefix_to_filename(reads_dis_plot)
-        pdf_sample_cor_plot = add_prefix_to_filename(sample_cor_plot)
-        pdf_volcano_plot = add_prefix_to_filename(volcano_plot)
-        pdf_diff_heatmap = add_prefix_to_filename(diff_heatmap)
-
-        plot_resize1 = 100 * round(10 / (8 + sample_num / 4), 2)
-        plot_resize2 = 100 * round(6.8 / (8 + sample_num / 10), 2)
-        plot_resize3 = 100 * round(9 / (8 + sample_num / 8), 2)
-        plot_resize4 = 100 * round(7.6 / (6 + sample_num / 5), 2)
-        plot_resize5 = 100 * round(7.6 / (7 + (sample_num - 5) / 5), 2)
-        plot_resize6 = 100 * round(8 / (6 + sample_num / 4), 2)
-        plot_resize7 = 100 * round(3 / (2 + (sample_num - 5) / 3), 2)
-        resize_cmds.append(resize_plot(
-            reads_quality_plot, plot_resize1, pdf_reads_quality_plot))
-        resize_cmds.append(resize_plot(
-            gc_plot, plot_resize1, pdf_gc_plot))
-        resize_cmds.append(resize_plot(
-            mapping_plot, plot_resize2, pdf_mapping_plot))
-        resize_cmds.append(resize_plot(
-            inner_dis_plot, plot_resize1, pdf_inner_dis_plot))
-        resize_cmds.append(resize_plot(genebody_cov_plot,
-                                       plot_resize3, pdf_genebody_cov_plot))
-        resize_cmds.append(resize_plot(
-            reads_dis_plot, plot_resize4, pdf_reads_dis_plot))
-        resize_cmds.append(resize_plot(
-            sample_cor_plot, plot_resize5, pdf_sample_cor_plot))
-        resize_cmds.append(resize_plot(
-            volcano_plot, plot_resize6, pdf_volcano_plot))
-        resize_cmds.append(resize_plot(
-            diff_heatmap, plot_resize7, pdf_diff_heatmap))
-        for each in resize_cmds:
-            print each
-        resize_cmds_inf = run_cmd(resize_cmds)
+        resize_cmds_inf = resize_report_plot(self.report_dir)
         with self.output().open('w') as resize_pdf_plot_log:
             resize_pdf_plot_log.write(resize_cmds_inf)
 
@@ -309,11 +260,11 @@ MODULE_DICT = {
 }
 
 
-def get_analysis_modules(module_name_list):
+def get_analysis_modules(module_name_list, proj_dir):
     module_list = []
     module_dirs = []
     for each_name in module_name_list:
-        each_module = MODULE_DICT[each_name]()
+        each_module = MODULE_DICT[each_name](proj_dir=proj_dir)
         each_module_dir = path.join(proj_dir, each_name)
         module_list.append(each_module)
         module_dirs.append(each_module_dir)
@@ -398,7 +349,7 @@ class run_pipe(luigi.Task):
         if 'rseqc' in analysis_list and (not check_rseqc_condition(geneme_fai)):
             analysis_list.remove('rseqc')
         analysis_modules, analysis_folders = get_analysis_modules(
-            analysis_list)
+            analysis_list, proj_dir)
         return analysis_modules
 
     def run(self):
