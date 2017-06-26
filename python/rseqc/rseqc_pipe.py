@@ -2,6 +2,7 @@
 
 import luigi
 from os import path
+from os import chdir
 from RNAseq_lib import run_cmd
 from RNAseq_lib import READ_DISTRIBUTION_PLOT_PREPARE
 from RNAseq_lib import RSEQC_PLOT_R
@@ -24,6 +25,7 @@ class prepare(luigi.Task):
         junction_saturation = path.join(OutDir, 'junction_saturation')
         read_duplication = path.join(OutDir, 'read_duplication')
         infer_experiment = path.join(OutDir, 'infer_experiment')
+        tin = path.join(OutDir, 'tin')
 
         tmp = run_cmd(['mkdir',
                        '-p',
@@ -33,7 +35,8 @@ class prepare(luigi.Task):
                        inner_distance,
                        junction_saturation,
                        read_duplication,
-                       infer_experiment])
+                       infer_experiment,
+                       tin])
         with self.output().open('w') as prepare_logs:
             prepare_logs.write(tmp)
 
@@ -155,7 +158,7 @@ class read_duplication(luigi.Task):
     sample = luigi.Parameter()
 
     def requires(self):
-        return [junction_saturation(sample=sample, OutDir=OutDir) for sample in sample_list]
+        return [inner_distance(sample=sample, OutDir=OutDir) for sample in sample_list]
 
     def run(self):
         tmp = run_cmd(['read_duplication.py',
@@ -194,6 +197,33 @@ class infer_experiment(luigi.Task):
         return luigi.LocalTarget('{0}/infer_experiment/{1}.infer_experiment.txt'.format(OutDir, self.sample))
 
 
+class tin(luigi.Task):
+    '''
+    TIN (transcript integrity number) calculate
+    '''
+
+    sample = luigi.Parameter()
+    OutDir = luigi.Parameter()
+
+    def requires(self):
+        return [infer_experiment(sample=sample, OutDir=OutDir) for sample in sample_list]
+
+    def run(self):
+        tin_dir = path.join(OutDir, 'tin')
+        chdir(tin_dir)
+        tin_inf = run_cmd(['tin.py',
+                           '-i',
+                           '{0}/{1}.bam'.format(BamDir, self.sample),
+                           '-r',
+                           BedFile])
+
+        with self.output().open('w') as tin_log:
+            tin_log.write(tin_inf)
+
+    def output(self):
+        return luigi.LocalTarget('{0}/logs/{1}.tin.log'.format(OutDir, self.sample))
+
+
 class read_duplication_plot_prepare(luigi.Task):
     '''
     collection read duplication plot data
@@ -201,7 +231,7 @@ class read_duplication_plot_prepare(luigi.Task):
     OutDir = luigi.Parameter()
 
     def requires(self):
-        return [infer_experiment(sample=sample, OutDir=OutDir) for sample in sample_list]
+        return [tin(sample=sample, OutDir=OutDir) for sample in sample_list]
 
     def run(self):
         tmp = run_cmd(['python',
@@ -273,8 +303,9 @@ class rseqc_collection(luigi.Task):
                         'infer_experiment', 'genebody_coverage/*geneBodyCoverage.curves.pdf',
                         'genebody_coverage/*geneBodyCoverage.r', 'Rplots.pdf']
         pdf_report_files_pattern = ['inner_distance/*inner_distance.bar.png', 'read_duplication/*reads_duplication.point.png',
-                            'genebody_coverage/*genebody_coverage.point.png', 'read_distribution/read_distribution.bar.png', 'read_distribution/*read_distribution.pie.png']
-        pdf_report_files = rsync_pattern_to_file(self.OutDir, pdf_report_files_pattern)
+                                    'genebody_coverage/*genebody_coverage.point.png', 'read_distribution/read_distribution.bar.png', 'read_distribution/*read_distribution.pie.png']
+        pdf_report_files = rsync_pattern_to_file(
+            self.OutDir, pdf_report_files_pattern)
         pdf_report_ini = path.join(self.OutDir, '.report_files')
         write_obj_to_file(pdf_report_files, pdf_report_ini)
         with self.output().open('w') as ignore_files_inf:
