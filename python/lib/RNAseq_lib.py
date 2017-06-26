@@ -8,6 +8,7 @@ from os import system
 from os import listdir
 from python_tools import load_fn_to_obj
 from python_tools import circ_mkdir_unix
+from python_tools import write_obj_to_file
 import pandas as pd
 from glob import glob
 from sqlalchemy import create_engine
@@ -17,6 +18,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import and_
 from PIL import Image
 import datetime
+# import logging
 
 
 def get_ip_address():
@@ -215,6 +217,170 @@ class sepcies_annotation_path:
         self.topgo_ano = get_annotation_path('go_gene_go.txt')
         self.gene_len = get_annotation_path('gene_length.txt')
         self.kegg_blast = get_annotation_path('gene.kegg.blasttab')
+
+
+class qc_info(object):
+
+    def __init__(self, sample_inf, qc_dir):
+        self.qc_dir = qc_dir
+        self.fastqc_dir = path.join(qc_dir, 'fastqc')
+        self.mapping_dir = path.join(qc_dir, 'mapping')
+        self.rseqc_dir = path.join(qc_dir, 'rseqc')
+        self.qc_summary_df = pd.read_table(
+            sample_inf, header=None, index_col=1)
+        self.qc_summary_df.columns = ['group']
+        self.Q30_CUT = 80
+        self.MAPPING_RATE_CUT = 70
+        self.MULTI_MAP_CUT = 20
+        self.DUP_CUT = 0.7
+        self.TIN_CUT = 70
+        self.CDS_CUT = 0.8
+
+    def get_fastqc_summary(self):
+        # get q30 data
+        fastqc_summary = path.join(self.fastqc_dir, 'fastqc_general_stats.txt')
+        fastqc_summary_df = pd.read_table(fastqc_summary, index_col=0)
+        self.qc_summary_df = pd.merge(
+            self.qc_summary_df, fastqc_summary_df, left_index=True, right_index=True)
+        # get N info
+        n_info = []
+        for each_sample in self.qc_summary_df.index:
+            each_gc_file = path.join(
+                self.fastqc_dir, 'gc_plot', '{}.gc.txt'.format(each_sample))
+            each_gc_df = pd.read_table(each_gc_file)
+            n_max = max(each_gc_df.loc[:, 'N']) / 100
+            n_info.append(n_max)
+        self.qc_summary_df.loc[:, 'N_MAX'] = n_info
+
+    def get_mapping_summary(self):
+        # get mapping data
+        mapping_summary = path.join(self.mapping_dir, 'mapping_stats.txt')
+        mapping_df = pd.read_table(mapping_summary, index_col=0)
+        self.qc_summary_df = pd.merge(
+            self.qc_summary_df, mapping_df, left_index=True, right_index=True)
+
+    def get_rseqc_summary(self):
+        # get median inner distance
+        inner_dis_median = []
+        for each_sample in self.qc_summary_df.index:
+            each_inner_dis_file = path.join(
+                self.rseqc_dir, 'inner_distance', '{}.inner_distance.txt'.format(each_sample))
+            each_inner_dis_df = pd.read_table(each_inner_dis_file, header=None)
+            inner_dis_median.append(each_inner_dis_df.loc[:, 1].median())
+        self.qc_summary_df.loc[:, 'Mean_inner_dis'] = inner_dis_median
+
+        # get dup info
+        dup_type = ['seq', 'pos']
+        for each_dup_type in dup_type:
+            each_dup_por = []
+            for each_sample in self.qc_summary_df.index:
+                each_dup_file = path.join(
+                    self.rseqc_dir, 'read_duplication', '{0}.{1}.DupRate.xls'.format(each_sample, each_dup_type))
+                each_dup_df = pd.read_table(each_dup_file)
+                each_dup_df.loc[:, 'seq_num'] = each_dup_df.loc[:,
+                                                                'Occurrence'] * each_dup_df.loc[:, 'UniqReadNumber']
+                each_dup = round(
+                    1 - (each_dup_df.loc[0, 'seq_num'] / each_dup_df.loc[:, 'seq_num'].sum()), 3)
+                each_dup_por.append(each_dup)
+            self.qc_summary_df.loc[:, 'Duplication_{}'.format(
+                each_dup_type)] = each_dup_por
+
+        # get tin
+        tin_df_list = []
+        for each_sample in self.qc_summary_df.index:
+            each_tin_file = path.join(
+                self.rseqc_dir, 'tin', '{}.summary.txt'.format(each_sample))
+            each_tin_df = pd.read_table(each_tin_file)
+            each_tin_df.loc[:, 'sample'] = each_sample
+            tin_df_list.append(each_tin_df)
+        tin_df = pd.concat(tin_df_list)
+        tin_df = tin_df.set_index('sample').drop('Bam_file', axis=1)
+        self.qc_summary_df = pd.merge(
+            self.qc_summary_df, tin_df, left_index=True, right_index=True)
+
+        # get read distribustion
+        cds_por_list = []
+        read_dis_file = path.join(
+            self.rseqc_dir, 'read_distribution', 'read_distribution.summary.txt')
+        read_dis_df = pd.read_table(read_dis_file, index_col=4)
+        for each_sample in self.qc_summary_df.index:
+            each_sample_cds_cor = read_dis_df.loc[read_dis_df.Group == 'CDS_Exons'].loc[each_sample,
+                                                                                        'Tag_count'] / read_dis_df.loc[each_sample, 'Tag_count'].sum()
+            cds_por_list.append(each_sample_cds_cor)
+        self.qc_summary_df.loc[:, 'CDS_portion'] = cds_por_list
+
+    def get_failed_msg(self, check_name, attr, cutoff, gt=True):
+        msg_list = ['{} check begin.'.format(check_name)]
+        if gt:
+            failed_df = self.qc_summary_df.loc[self.qc_summary_df[attr] > cutoff]
+        else:
+            failed_df = self.qc_summary_df.loc[self.qc_summary_df[attr] < cutoff]
+        if failed_df.empty:
+            msg_list.append('{} check passed.'.format(check_name))
+        else:
+            for each_index in failed_df.index:
+                each_failed_stat = failed_df.loc[each_index, attr]
+                msg_list.append('[{0}] {1} check failed: {2}.'.format(
+                    each_index, check_name, each_failed_stat))
+        return msg_list
+
+    def check_data(self):
+        qc_summary_check_file = path.join(self.qc_dir, 'qc_check_out.txt')
+        write_obj_to_file('QC check logs.', qc_summary_check_file)
+        # check q30:
+        if path.exists(self.fastqc_dir):
+            self.get_fastqc_summary()
+            q30_check_msg = self.get_failed_msg(
+                'Q30', 'Q30(%)', self.Q30_CUT, gt=False)
+            write_obj_to_file(
+                q30_check_msg, qc_summary_check_file, append=True)
+        # check mapping
+        if path.exists(self.mapping_dir):
+            self.get_mapping_summary()
+            self.qc_summary_df.loc[:, 'unique_mapping_rate'] = [float(each.rstrip(
+                '%')) for each in self.qc_summary_df.loc[:, 'Uniquely mapped reads %']]
+            self.qc_summary_df.loc[:, 'multiple_mapping_rate'] = [float(each.rstrip(
+                '%')) for each in self.qc_summary_df.loc[:, '% of reads mapped to multiple loci']]
+            self.qc_summary_df.loc[:, 'total_mapping_rate'] = self.qc_summary_df.loc[:,
+                                                                                     'unique_mapping_rate'] + self.qc_summary_df.loc[:, 'multiple_mapping_rate']
+            mapping_rate_median = self.qc_summary_df.loc[:, 'total_mapping_rate'].median(
+            )
+            mapping_rate_cutoff = max(
+                (mapping_rate_median - 10), self.MAPPING_RATE_CUT)
+            mapping_rate_check_msg = self.get_failed_msg(
+                'Mapping rate', 'total_mapping_rate', mapping_rate_cutoff, gt=False)
+            write_obj_to_file(mapping_rate_check_msg,
+                              qc_summary_check_file, append=True)
+            multi_map_median = self.qc_summary_df.loc[:,
+                                                      'multiple_mapping_rate'].median()
+            multi_map_cutoff = min((multi_map_median + 10), self.MULTI_MAP_CUT)
+            multi_map_check_msg = self.get_failed_msg(
+                'Multiple mapping rate', 'multiple_mapping_rate', multi_map_cutoff)
+            write_obj_to_file(multi_map_check_msg,
+                              qc_summary_check_file, append=True)
+            self.qc_summary_df = self.qc_summary_df.drop(
+                ['unique_mapping_rate', 'multiple_mapping_rate', 'total_mapping_rate'], axis=1)
+        # check rseqc
+        if path.exists(self.rseqc_dir):
+            self.get_rseqc_summary()
+            # check duplication
+            dup_check_msg = self.get_failed_msg('Duplication', 'Duplication_seq', self.DUP_CUT)
+            write_obj_to_file(dup_check_msg,
+                              qc_summary_check_file, append=True)
+            # check tin
+            tin_check_msg = self.get_failed_msg('TIN', 'TIN(median)', self.TIN_CUT, gt=False)
+            write_obj_to_file(tin_check_msg,
+                              qc_summary_check_file, append=True)
+
+            # check cds
+            cds_check_msg = self.get_failed_msg('CDS reads portion', 'CDS_portion', self.CDS_CUT, gt=False)
+            write_obj_to_file(cds_check_msg,
+                              qc_summary_check_file, append=True)
+
+        # write qc summary out
+        self.qc_summary_df.index.name = 'Sample'
+        qc_summary_out = path.join(self.qc_dir, 'qc_summary.txt')
+        self.qc_summary_df.to_csv(qc_summary_out, sep='\t')
 
 
 def run_cmd(cmd_obj, is_shell_cmd=False):

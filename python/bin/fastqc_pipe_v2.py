@@ -1,0 +1,1 @@
+../fastqc/fastqc_pipe_v2.py
