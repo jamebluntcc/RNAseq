@@ -210,7 +210,9 @@ class quant_collection(luigi.Task):
 
     def run(self):
         ignore_files = ['.ignore', 'logs', 'kallisto/*/run_info.json',
-                        '.report_files', 'Rplots.pdf']
+                        '.report_files', 'Rplots.pdf',
+                        'expression_summary/pdf.*',
+                        'expression_summary/html.example.diff.table.txt']
         report_files_pattern = ['expression_summary/*.png',
                         'differential_analysis/*/*png',
                         'expression_summary/*Gene.tpm.txt',
