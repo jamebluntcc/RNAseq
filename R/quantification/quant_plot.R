@@ -8,6 +8,7 @@ suppressMessages(library(ggplot2, quietly = T))
 suppressMessages(library(stringr, quietly = T))
 suppressMessages(library(yarrr, quietly = T))
 suppressMessages(library(gplots))
+suppressMessages(library(ggthemr))
 options(bitmapType = "cairo")
 
 theme_onmath <- function(base_size = 14) {
@@ -30,12 +31,18 @@ theme_onmath_border <- function(base_size = 14) {
     strip.background = element_rect(colour = "#f0f0f0", fill = "#f0f0f0"), strip.text = element_text(face = "bold"))
 }
 
+theme_cluster <- theme_onmath() + theme(axis.text.x = element_text(vjust = -0.2, size = rel(.8), angle = 90))
+
 onmath_color <- c("#386cb0", "#fdb462", "#7fc97f", "#ef3b2c", "#662506", "#a6cee3",
   "#fb9a99", "#984ea3", "#ffff33")
 onmath_color_dark <- c(piratepal("eternal"), piratepal("brave"))
 onmath_color_bright <- c(piratepal("appletv"), piratepal("nemo"))
 onmath_color_basel <- c(piratepal("basel"))
 onmath_color_light <- c(brewer.pal(9, "Set1"))
+
+ggthemr("flat")
+gg_flat_col <- swatch()[1:length(swatch())]
+ggthemr_reset()
 
 # color and fill
 scale_color_onmath <- function(...) {
@@ -58,8 +65,6 @@ scale_fill_onmath <- function(...) {
     ...)
 }
 ## heatmap
-
-
 
 my_col <- c("#386cb0", "#fdb462", "#7fc97f", "#ef3b2c", "#662506", "#a6cee3", "#fb9a99",
   "#984ea3", "#ffff33")
@@ -299,7 +304,7 @@ om_correlation_plot <- function(plot_data, samples, outdir) {
   sample_cor <- cor(data, method = "pearson", use = "pairwise.complete.obs")
   sample_cor_df <- as.data.frame(sample_cor)
   sample_cor_df <- cbind(Sample = rownames(sample_cor_df), sample_cor_df)
-  write.table(sample_cor_df, file = paste(outdir, "Sample.correlation.stat.txt", 
+  write.table(sample_cor_df, file = paste(outdir, "Sample.correlation.stat.txt",
     sep = "/"), quote = F, sep = "\t", row.names = F)
 
   Group <- sample_colors[1:length(unique(samples$condition))]
@@ -332,4 +337,29 @@ om_correlation_plot <- function(plot_data, samples, outdir) {
     color = rev(redgreen(75)), border_color = NA, cellwidth = cellwidth, fontsize = fontsize)
   dev.off()
 
+}
+
+
+cluster_plot <- function(plot_data, out_prefix) {
+
+  cluster_number <- length(unique(plot_data$cluster))
+  col_theme <- colorRampPalette(gg_flat_col)(cluster_number)
+
+  cluster_plot <- ggplot(plot_data, aes(x=variable, y=value, group = Gene_id, color=cluster)) +
+    geom_line(alpha = 0.2) +
+    scale_color_manual(guide=F, values = col_theme) +
+    xlab("") + ylab("Scaled log10(tpm+1)") + theme_cluster
+
+    if (cluster_number > 1) {
+      facet_wrap_ncol = round(sqrt(cluster_number))
+      cluster_plot <- cluster_plot + facet_wrap(~cluster, ncol = facet_wrap_ncol)
+    }
+
+  plot_height <- 6 + cluster_number/4
+  plot_width <- 8 + cluster_number/4
+
+  ggsave(paste(out_prefix, "png", sep = "."), plot = cluster_plot, width = plot_width, height = plot_height,
+         dpi = 300, type = "cairo")
+  ggsave(paste(out_prefix, "pdf", sep = "."), plot = cluster_plot, width = plot_width, height = plot_height,
+         device = cairo_pdf)
 }
